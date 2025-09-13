@@ -1,0 +1,12 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded square background (black) -->
+  <rect x="0" y="0" width="32" height="32" rx="7" ry="7" fill="#2c2c2c"/>
+  
+  <!-- Chat bubble outline -->
+  <path d="M 8 10 Q 8 8 10 8 L 20 8 Q 22 8 22 10 L 22 16 Q 22 18 20 18 L 12 18 L 8 22 L 10 18 Q 8 18 8 16 Z" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="1.5" 
+        stroke-linejoin="round" 
+        stroke-linecap="round"/>
+</svg>

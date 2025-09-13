@@ -1,0 +1,36 @@
+export const chatRooms = [
+  {
+    id: 1,
+    name: "General",
+    description: "A place for general discussion about anything and everything",
+    numberOfUser: 10,
+    color: "bg-blue-500",
+    lastMessage: "Hey everyone! Welcome to the chat",
+    lastActive: "2 minutes ago",
+    category: "Public",
+    isActive: true,
+  },
+  {
+    id: 2,
+    name: "Tech Talk",
+    description:
+      "Discuss the latest in technology, programming, and innovation",
+    numberOfUser: 5,
+    color: "bg-purple-500",
+    lastMessage: "What do you think about the new AI updates?",
+    lastActive: "5 minutes ago",
+    category: "Technology",
+    isActive: true,
+  },
+  {
+    id: 3,
+    name: "Random",
+    description: "Talk about anything and everything that comes to mind",
+    numberOfUser: 2,
+    color: "bg-green-500",
+    lastMessage: "Anyone up for a game night?",
+    lastActive: "1 hour ago",
+    category: "Entertainment",
+    isActive: false,
+  },
+];
