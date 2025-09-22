@@ -12,6 +12,8 @@ import axios from "axios";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye } from "lucide-react";
+import { socket } from "@/components/ui/chat-room/socket";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface SignInForm {
   email: string;
@@ -20,27 +22,63 @@ export interface SignInForm {
 
 export const SignIn = () => {
   const navigate = useNavigate();
-
+  const { handleLogIn } = useAuth();
   const signInForm = useForm<SignInForm>({
     defaultValues: {
       email: "",
       password: "",
     },
   });
-
   const signInFunction = async (data: SignInForm) => {
-    const respone = await axios.post("http://localhost:3000/auth/signin", {
-      email: data.email,
-      password: data.password,
-    });
+    const respone = await axios.post(
+      "https://chat-room-be-production.up.railway.app/auth/signin",
+      {
+        email: data.email,
+        password: data.password,
+      }
+    );
     return respone.data;
   };
 
   const { mutate: signIn } = useMutation({
     mutationFn: signInFunction,
     onSuccess: (data) => {
-      setToken(data.data.accessToken);
-      console.log(data);
+      const user = data.data.user;
+      const token = data.data.accessToken;
+      handleLogIn(user);
+      setToken(token);
+
+      if (socket.connected) {
+        socket.disconnect();
+      }
+
+      // QUAN TRỌNG: Set query trước khi connect
+      socket.io.opts.query = {
+        userId: user.id.toString(), // Phải convert sang string
+      };
+      socket.auth = { userId: user.id, token };
+
+      // Connect socket
+      socket.connect();
+
+      // Xử lý events
+      socket.on("connect", () => {
+        console.log("✅ Socket connected:", socket.id);
+        console.log("✅ UserId sent:", user.id);
+
+        // Có thể emit thêm để double-check (optional)
+        socket.emit("onlineUser", { userId: user.id });
+      });
+
+      socket.on("connect_error", (error) => {
+        console.error("❌ Socket connect error:", error);
+      });
+
+      // Listen for user status changes
+      socket.on("userStatusChanged", (data) => {
+        console.log("👥 User status changed:", data);
+      });
+
       navigate("/");
     },
     onError: (error) => {

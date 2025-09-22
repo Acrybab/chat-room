@@ -1,3 +1,5 @@
+import type { Owner } from "@/store/room.store";
+
 export interface ChatRoom {
   id: number;
   name: string;
@@ -8,6 +10,10 @@ export interface ChatRoom {
   messages: [];
   members: [];
   updatedAt: string;
+  isPrivate: boolean;
+  memberCount: number;
+  owner: Owner;
+  userRole: string;
 }
 
 export interface ChatRoomListResponse {
@@ -16,10 +22,25 @@ export interface ChatRoomListResponse {
     chatRooms: ChatRoom[];
   };
 }
+export type Room = {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  isActive: boolean;
+  isPrivate: boolean;
+  createdAt: string;
+  updatedAt: string;
+  owner: Owner;
+  memberCount: number;
+  messages: Message[];
+  userRole: string;
+};
 
 export interface Me {
   id: number;
   email: string;
+  isOnline: boolean;
 }
 
 export interface MeResponse {
@@ -35,6 +56,8 @@ export interface Message {
   content: string;
   createdAt: string;
   updatedAt: string;
+  userId: number;
+  roomId: number;
   user: {
     id: number;
     email: string;

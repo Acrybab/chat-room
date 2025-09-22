@@ -1,17 +1,18 @@
+import { socket } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import type { MeResponse, MessageResponse } from "@/types/chatRoom.types";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseChatRoomProps {
   roomId: string | undefined;
   message: string;
   setMessage: (message: string) => void;
 }
+
 export interface MessageRealTime {
-  // id: number;
+  id: number;
   isOwn: boolean;
   content: string;
   createdAt: string;
@@ -23,7 +24,9 @@ export interface MessageRealTime {
   chatRoom: {
     id: number;
   };
+  readBy?: number[]; // 🆕 thêm read receipt
 }
+
 export const useChatRoom = ({
   roomId,
   message,
@@ -32,28 +35,32 @@ export const useChatRoom = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<MessageRealTime[]>([]);
+  const [isConnected, setIsConnected] = useState(socket.connected);
+  const [typingUsers, setTypingUsers] = useState<number[]>([]);
+  let typingTimeout: NodeJS.Timeout;
 
+  // Get current user
   const getMeFunction = async () => {
-    const respone = await axios.get("http://localhost:3000/auth/profile", {
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-      },
-    });
-    return respone.data;
+    const response = await axios.get(
+      "https://chat-room-be-production.up.railway.app/auth/profile",
+      {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }
+    );
+    return response.data;
   };
-  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+
   const { data: userData } = useQuery<MeResponse>({
     queryKey: ["me"],
     queryFn: getMeFunction,
   });
 
+  // Get messages in room
   const getMessagesFunction = async () => {
     const response = await axios.get(
-      `http://localhost:3000/messages/${roomId}`,
+      `https://chat-room-be-production.up.railway.app/messages/${roomId}`,
       {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
+        headers: { Authorization: `Bearer ${getToken()}` },
       }
     );
     return response.data;
@@ -65,59 +72,98 @@ export const useChatRoom = ({
     enabled: !!roomId,
   });
 
-  // Auto scroll to bottom
+  // Set messages
+  useEffect(() => {
+    if (messagesData?.data.messages && userData?.data.user.id) {
+      const messagesWithOwnership = messagesData.data.messages.map((msg) => ({
+        ...msg,
+        isOwn: msg.user.id === userData.data.user.id,
+      }));
+      setMessages(messagesWithOwnership);
+    }
+  }, [messagesData, userData?.data.user.id]);
+
+  // Auto scroll
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Socket connection
   useEffect(() => {
-    if (!userData?.data.user.id || !roomId) return;
-
-    if (!socketRef.current) {
-      socketRef.current = io("http://localhost:3000", {
-        query: { userId: userData.data.user.id },
-      });
-    }
-
-    const socket = socketRef.current;
-
-    // Sau khi connect -> join vào room
-    socket.emit("joinRoom", {
-      userId: userData.data.user.id,
-      roomId: Number(roomId),
-    });
-
-    // Lắng nghe newMessage
-    const handleNewMessage = (msg: MessageRealTime) => {
-      console.log("Received newMessage:", msg);
-      setMessages((prev) => [...prev, msg]);
+    const onConnect = () => {
+      setIsConnected(true);
+    };
+    const onDisconnect = () => {
+      setIsConnected(false);
     };
 
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    setIsConnected(socket.connected);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+    };
+  }, []);
+
+  // New message
+  const handleNewMessage = useCallback(
+    (msg: MessageRealTime) => {
+      if (!userData?.data.user.id) return;
+
+      setMessages((prev) => {
+        const exists = prev.some((existingMsg) => existingMsg.id === msg.id);
+        if (exists) return prev;
+
+        const messageWithOwnership = {
+          ...msg,
+          isOwn: msg.user.id === userData.data.user.id,
+        };
+
+        return [...prev, messageWithOwnership];
+      });
+    },
+    [userData?.data.user.id]
+  );
+
+  useEffect(() => {
+    if (!userData?.data.user.id || !isConnected) return;
+
+    socket.off("newMessage", handleNewMessage);
     socket.on("newMessage", handleNewMessage);
 
-    // cleanup
     return () => {
       socket.off("newMessage", handleNewMessage);
-      socket.disconnect();
-      socketRef.current = null;
     };
-  }, [userData?.data.user.id, roomId]);
-  // Handle send message
+  }, [userData?.data.user.id, isConnected, handleNewMessage]);
+
+  // Join room
+  useEffect(() => {
+    if (roomId && userData?.data.user.id && isConnected) {
+      socket.emit("joinRoom", {
+        userId: userData.data.user.id,
+        roomId: Number(roomId),
+      });
+    }
+  }, [roomId, userData?.data.user.id, isConnected]);
+
+  // Send message
   const handleSendMessage = () => {
-    if (!message.trim() || !socketRef.current) return;
+    if (!message.trim() || !isConnected || !userData?.data.user.id) return;
 
-    socketRef.current.emit("sendMessage", {
+    const messageData = {
       roomId: Number(roomId),
-      userId: userData?.data.user.id as number,
+      userId: userData.data.user.id,
       content: message.trim(),
-    });
+    };
 
+    socket.emit("sendMessage", messageData);
     setMessage("");
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
-  // Handle key press
+
+  // Key press
   const handleKeyPress = (e: {
     key: string;
     shiftKey: boolean;
@@ -128,11 +174,87 @@ export const useChatRoom = ({
       handleSendMessage();
     }
   };
-  const allMessages = [...(messagesData?.data.messages || []), ...messages];
+
+  // Scroll when new message
   useEffect(() => {
     scrollToBottom();
-  }, [allMessages]);
-  // Get room name based on ID
+  }, [messages]);
+
+  // Typing indicator
+  const handleTyping = () => {
+    if (!roomId || !userData?.data.user.id) return;
+
+    socket.emit("typing", {
+      roomId: Number(roomId),
+      userId: userData.data.user.id,
+    });
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit("stopTyping", {
+        roomId: Number(roomId),
+        userId: userData.data.user.id,
+      });
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (!isConnected) return;
+
+    socket.on("userTyping", ({ userId }) => {
+      if (userId !== userData?.data.user.id) {
+        setTypingUsers((prev) => [...new Set([...prev, userId])]);
+      }
+    });
+
+    socket.on("userStopTyping", ({ userId }) => {
+      setTypingUsers((prev) => prev.filter((id) => id !== userId));
+    });
+
+    socket.on("messageRead", ({ userId, messageId }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? { ...m, readBy: [...(m.readBy || []), userId] }
+            : m
+        )
+      );
+    });
+
+    return () => {
+      socket.off("userTyping");
+      socket.off("userStopTyping");
+      socket.off("messageRead");
+    };
+  }, [isConnected, userData?.data.user.id]);
+
+  // 🆕 Mark as read (khi load tin nhắn cuối)
+  useEffect(() => {
+    if (!messages.length || !userData?.data.user.id) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.user.id !== userData.data.user.id) {
+      socket.emit("markAsRead", {
+        roomId: Number(roomId),
+        userId: userData.data.user.id,
+        messageId: lastMsg.id,
+      });
+    }
+  }, [messages, roomId, userData?.data.user.id]);
+
+  // Helpers
+  const formatTimestamp = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const getInitials = (name: string) =>
+    name
+      ?.split(" ")
+      ?.map((n) => n[0])
+      ?.join("")
+      ?.toUpperCase();
+
   const getRoomName = () => {
     const roomNames = {
       "1": "General Discussion",
@@ -151,27 +273,9 @@ export const useChatRoom = ({
       case "away":
         return "text-yellow-500";
       case "offline":
-        return "text-gray-400";
       default:
         return "text-gray-400";
     }
-  };
-
-  // Format timestamp
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Get initials for avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
   };
 
   return {
@@ -179,13 +283,15 @@ export const useChatRoom = ({
     inputRef,
     handleSendMessage,
     handleKeyPress,
+    handleTyping, // 🆕 dùng trong onChange input
     getRoomName,
     getStatusColor,
     formatTimestamp,
     getInitials,
-    messagesData,
     userData,
     messages,
-    allMessages,
+    isConnected,
+    typingUsers, // 🆕 để hiển thị "typing..."
+    isTyping: typingUsers.length > 0, // 🆕 có ai đang gõ không
   };
 };

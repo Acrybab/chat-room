@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { ArrowLeft, Hash } from "lucide-react";
 
 import {
@@ -16,11 +16,17 @@ import { HeaderActions } from "@/components/ui/chat-room/HeaderActions";
 import { MessageArea } from "@/components/ui/chat-room/MessageArea";
 import { MessageInput } from "@/components/ui/chat-room/MessageInput";
 import { MemberSlide } from "@/components/ui/chat-room/MemberSlide";
+import { useAuth } from "@/hooks/useAuth";
+import { getToken } from "@/lib/cookies";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export const Room = () => {
   const { roomId } = useParams();
+  const [isMemberSlideOpen, setIsMemberSlideOpen] = useState(false);
 
-  const { message, setMessage, onlineUsers, isTyping } = useRoomStore();
+  const { message, setMessage, onlineUsers, setOnlineUsers } = useRoomStore();
 
   const {
     messagesEndRef,
@@ -32,13 +38,46 @@ export const Room = () => {
     formatTimestamp,
     getInitials,
     userData,
-    allMessages,
+    messages,
+    handleTyping,
+    isTyping,
   } = useChatRoom({
     message,
     setMessage,
     roomId,
   });
-  console.log(allMessages, "messages in room");
+
+  const { isLoggedIn } = useAuth();
+
+  const getOnlineUsers = async () => {
+    const response = await axios.get(
+      `https://chat-room-be-production.up.railway.app/users/members/${roomId}`
+    );
+    return response.data;
+  };
+
+  const { data } = useQuery({
+    queryKey: ["onlineUsers"],
+    queryFn: getOnlineUsers,
+  });
+
+  useEffect(() => {
+    if (data) {
+      setOnlineUsers(data.data.users);
+    }
+  }, [data, setOnlineUsers]);
+
+  if (!getToken()) {
+    return <Navigate to="/sign-in" replace />;
+  }
+  if (!isLoggedIn) {
+    return <Navigate to="/sign-in" replace />;
+  }
+
+  const navigateBack = () => {
+    window.history.back();
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <div className="flex-1 flex flex-col min-w-0">
@@ -46,7 +85,12 @@ export const Room = () => {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="icon" className="lg:hidden">
+                <Button
+                  onClick={navigateBack}
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                >
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
 
@@ -59,28 +103,34 @@ export const Room = () => {
                   <div className="space-y-1">
                     <CardTitle className="text-lg">{getRoomName()}</CardTitle>
                     <CardDescription className="text-sm">
-                      {onlineUsers?.filter((u) => u.status === "online").length}{" "}
-                      members online
+                      {onlineUsers?.filter((u) => u.isOnline).length} members
+                      online
                     </CardDescription>
                   </div>
                 </div>
               </div>
-              <HeaderActions userId={userData?.data.user.id} roomId={roomId} />
+              <HeaderActions
+                userId={userData?.data.user.id}
+                roomId={roomId}
+                setIsMemberSlideOpen={setIsMemberSlideOpen}
+                isMemberSlideOpen={isMemberSlideOpen}
+              />
             </div>
           </CardHeader>
         </Card>
         <MessageArea
           userId={userData?.data.user.id}
-          // messagesData={messagesData}
           formatTimestamp={formatTimestamp}
           getInitials={getInitials}
           messagesEndRef={messagesEndRef}
           isTyping={isTyping}
-          // messages={messages}
-          allMessages={allMessages}
+          messages={messages}
+          currentUserEmail={userData?.data.user.email}
         />
 
         <MessageInput
+          onlineUsers={onlineUsers}
+          handleTyping={handleTyping}
           userData={userData}
           roomId={roomId}
           message={message}
@@ -92,11 +142,15 @@ export const Room = () => {
         />
       </div>
 
-      <MemberSlide
-        onlineUsers={onlineUsers}
-        getInitials={getInitials}
-        getStatusColor={getStatusColor}
-      />
+      {isMemberSlideOpen && (
+        <MemberSlide
+          onlineUsers={onlineUsers}
+          getInitials={getInitials}
+          getStatusColor={getStatusColor}
+          isOpen={isMemberSlideOpen}
+          onClose={() => setIsMemberSlideOpen(false)}
+        />
+      )}
     </div>
   );
 };

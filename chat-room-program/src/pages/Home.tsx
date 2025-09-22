@@ -11,8 +11,11 @@ import { HeaderSection } from "@/components/ui/home-page/HeaderSection";
 import { StatsCards } from "@/components/ui/home-page/StatsCards";
 import { Input } from "@/components/ui/input";
 import { ChatRoomList } from "@/features/chat/ChatRoomList";
+import { useAuth } from "@/hooks/useAuth";
 import { useHomePage } from "@/hooks/useHomePage";
+import { getToken } from "@/lib/cookies";
 import { Plus } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 export const Home = () => {
   const {
@@ -25,7 +28,21 @@ export const Home = () => {
     setIsOpenDialog,
     setRoomDescription,
     setRoomName,
+    roomCategory,
+    setRoomCategory,
   } = useHomePage();
+  const { isLoadingAuth, isLoggedIn } = useAuth();
+
+  if (!getToken()) {
+    return <Navigate to="/sign-in" replace />;
+  }
+  if (isLoadingAuth) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isLoggedIn) {
+    return <Navigate to="/sign-in" replace />;
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <HeaderSection />
@@ -69,11 +86,19 @@ export const Home = () => {
                     value={roomDescription}
                   />
                 </div>
+                <div>
+                  <p>Category:</p>
+                  <Input
+                    placeholder="Enter room category"
+                    onChange={(e) => setRoomCategory(e.target.value)}
+                    value={roomCategory}
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button
                   onClick={() => {
-                    handleCreateRoom(roomName, roomDescription);
+                    handleCreateRoom(roomName, roomDescription, roomCategory);
                     setRoomName("");
                     setRoomDescription("");
                   }}
@@ -89,10 +114,6 @@ export const Home = () => {
           handleJoinRoom={handleJoinRoom}
         />
         <StatsCards />
-        {/* <Footer
-          handleCreateRoom={handleCreateRoom}
-          handleJoinRoom={handleJoinRoom}
-        /> */}
       </div>
     </div>
   );

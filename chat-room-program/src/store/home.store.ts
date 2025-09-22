@@ -7,6 +7,8 @@ export type HomeState = {
   setRoomDescription: (description: string) => void;
   isOpenDialog: boolean;
   setIsOpenDialog: (isOpen: boolean) => void;
+  roomCategory: string;
+  setRoomCategory: (category: string) => void;
 };
 
 const useHomeStore = create<HomeState>((set) => ({
@@ -17,6 +19,8 @@ const useHomeStore = create<HomeState>((set) => ({
     set({ roomDescription: description }),
   isOpenDialog: false,
   setIsOpenDialog: (isOpen: boolean) => set({ isOpenDialog: isOpen }),
+  roomCategory: "",
+  setRoomCategory: (category: string) => set({ roomCategory: category }),
 }));
 
 export default useHomeStore;
