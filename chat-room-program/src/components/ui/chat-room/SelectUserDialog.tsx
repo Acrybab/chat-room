@@ -5,6 +5,7 @@ import { DialogTitle } from "@radix-ui/react-dialog";
 import { useState } from "react";
 import type { User, UserResponse } from "@/types/user.types";
 import { socket } from "./socket";
+import { Button } from "../button";
 
 interface SelectUserDialogProps {
   openDialog: boolean;
@@ -132,9 +133,9 @@ export const SelectUserDialog = ({
               {selectedUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
+                  className="flex items-center bg-gray-100 text-black px-3 py-1 rounded-full text-sm font-medium"
                 >
-                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
+                  <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
                     {user.email.charAt(0).toUpperCase()}
                   </div>
                   <span className="max-w-24 truncate">
@@ -142,7 +143,7 @@ export const SelectUserDialog = ({
                   </span>
                   <button
                     onClick={() => removeSelectedUser(user.id)}
-                    className="ml-2 hover:bg-blue-200 rounded-full p-0.5 transition-colors duration-150"
+                    className="ml-2 hover:bg-gray-200 rounded-full p-0.5 transition-colors duration-150"
                   >
                     <svg
                       className="w-3 h-3"
@@ -229,11 +230,11 @@ export const SelectUserDialog = ({
                   index !== filteredUsers.length - 1
                     ? "border-b border-gray-50"
                     : ""
-                } ${isSelected ? "bg-blue-50" : ""}`}
+                } ${isSelected ? "bg-gray-100" : ""}`}
               >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0 mr-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white font-semibold">
                     {user.email.charAt(0).toUpperCase()}
                   </div>
                   {/* Online indicator */}
@@ -246,7 +247,7 @@ export const SelectUserDialog = ({
                 <div className="flex-1 min-w-0">
                   <p
                     className={`font-medium truncate ${
-                      isSelected ? "text-blue-700" : "text-gray-900"
+                      isSelected ? "text-black" : "text-gray-900"
                     }`}
                   >
                     {user.email}
@@ -267,8 +268,8 @@ export const SelectUserDialog = ({
                   <div
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                       isSelected
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-gray-300 hover:border-blue-400"
+                        ? "bg-gray-500 border-gray-500"
+                        : "border-gray-300 hover:border-gray-400"
                     }`}
                   >
                     {isSelected && (
@@ -301,18 +302,19 @@ export const SelectUserDialog = ({
                 {selectedUsers.length} people selected
               </span>
               <div className="flex space-x-3">
-                <button
+                <Button
+                  variant={"outline"}
                   onClick={() => setSelectedUsers([])}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors duration-150"
                 >
                   Clear
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleAddUserToGroup}
-                  className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md"
+                  className="px-6 py-2 text-white font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md"
                 >
                   Add to Group
-                </button>
+                </Button>
               </div>
             </div>
           </div>

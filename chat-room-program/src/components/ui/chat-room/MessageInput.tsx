@@ -213,7 +213,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             size="icon"
             className={`h-9 w-9 shrink-0 rounded-full transition-all ${
               message.trim()
-                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                ? "bg-black text-white shadow-sm"
                 : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
             }`}
           >

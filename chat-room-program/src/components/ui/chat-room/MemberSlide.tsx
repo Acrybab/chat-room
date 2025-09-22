@@ -85,7 +85,7 @@ export const MemberSlide = ({
                 >
                   <div className="relative flex-shrink-0">
                     <Avatar className="h-9 w-9 ring-2 ring-gray-100 dark:ring-gray-800">
-                      <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white">
+                      <AvatarFallback className="text-xs font-semibold bg-black text-white">
                         {getInitials(user.email)}
                       </AvatarFallback>
                     </Avatar>

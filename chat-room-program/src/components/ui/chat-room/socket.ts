@@ -23,7 +23,7 @@ class SocketManager {
         forceNew: false,
         reconnection: true,
         autoConnect: false,
-        timeout: 5000,
+        timeout: 5 * 60 * 1000,
       });
 
       // Debug events
