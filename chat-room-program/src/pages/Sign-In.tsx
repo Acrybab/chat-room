@@ -4,6 +4,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { setToken } from "@/lib/cookies";
@@ -14,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye } from "lucide-react";
 import { socket } from "@/components/ui/chat-room/socket";
 import { useAuth } from "@/hooks/useAuth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 export interface SignInForm {
   email: string;
@@ -23,12 +26,38 @@ export interface SignInForm {
 export const SignIn = () => {
   const navigate = useNavigate();
   const { handleLogIn } = useAuth();
+
+  const SignInSchema = z.object({
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Invalid email address")
+      .refine((val) => val.includes("@"), {
+        message: "Email must contain @",
+      }),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(16, "Password must be at most 16 characters")
+      .refine((val) => /[A-Z]/.test(val), {
+        message: "Password must contain at least one uppercase letter",
+      })
+      .refine((val) => /[0-9]/.test(val), {
+        message: "Password must contain at least one number",
+      })
+      .refine((val) => /[!@#$%^&*(),.?":{}|<>]/.test(val), {
+        message: "Password must contain at least one special character",
+      }),
+  });
+
   const signInForm = useForm<SignInForm>({
     defaultValues: {
       email: "",
       password: "",
     },
+    resolver: zodResolver(SignInSchema),
   });
+
   const signInFunction = async (data: SignInForm) => {
     const respone = await axios.post(
       "https://chat-room-be-production.up.railway.app/auth/signin",
@@ -52,21 +81,16 @@ export const SignIn = () => {
         socket.disconnect();
       }
 
-      // QUAN TRỌNG: Set query trước khi connect
       socket.io.opts.query = {
-        userId: user.id.toString(), // Phải convert sang string
+        userId: user.id.toString(),
       };
       socket.auth = { userId: user.id, token };
 
-      // Connect socket
       socket.connect();
 
-      // Xử lý events
       socket.on("connect", () => {
         console.log("✅ Socket connected:", socket.id);
         console.log("✅ UserId sent:", user.id);
-
-        // Có thể emit thêm để double-check (optional)
         socket.emit("onlineUser", { userId: user.id });
       });
 
@@ -74,7 +98,6 @@ export const SignIn = () => {
         console.error("❌ Socket connect error:", error);
       });
 
-      // Listen for user status changes
       socket.on("userStatusChanged", (data) => {
         console.log("👥 User status changed:", data);
       });
@@ -133,24 +156,28 @@ export const SignIn = () => {
                           Email
                         </FormLabel>
                         <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                             <Mail className="h-5 w-5 text-gray-400" />
                           </div>
                           <FormControl>
                             <Input
                               placeholder="Enter your email"
                               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
-                              onChange={(e) =>
-                                signInForm.setValue("email", e.target.value)
-                              }
+                              onChange={(e) => {
+                                signInForm.setValue("email", e.target.value);
+                                signInForm.trigger("email");
+                              }}
                               value={signInForm.getValues("email")}
                             />
                           </FormControl>
                         </div>
+                        {/* Move FormMessage outside of relative container */}
+                        <FormMessage className="text-xs text-red-500 mt-1" />
                       </div>
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={signInForm.control}
                   name="password"
@@ -161,27 +188,31 @@ export const SignIn = () => {
                           Password
                         </FormLabel>
                         <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                             <Lock className="h-5 w-5 text-gray-400" />
                           </div>
                           <FormControl>
                             <Input
                               type="password"
                               placeholder="Enter your password"
+                              max={16}
                               className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none transition-all"
-                              onChange={(e) =>
-                                signInForm.setValue("password", e.target.value)
-                              }
+                              onChange={(e) => {
+                                signInForm.setValue("password", e.target.value);
+                                signInForm.trigger("password");
+                              }}
                               value={signInForm.getValues("password")}
                             />
                           </FormControl>
                           <button
                             type="button"
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center z-10"
                           >
                             <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                           </button>
                         </div>
+                        {/* Move FormMessage outside of relative container */}
+                        <FormMessage className="text-xs text-red-500 mt-1" />
                       </div>
                     </FormItem>
                   )}
@@ -216,7 +247,7 @@ export const SignIn = () => {
               <button
                 onClick={() => {
                   window.location.href =
-                    "http://localhost:3000/auth/google/login";
+                    "https://chat-room-be-production.up.railway.app/auth/google/login";
                 }}
                 type="button"
                 className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors"

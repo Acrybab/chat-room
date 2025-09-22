@@ -101,7 +101,7 @@ export const MessageArea = ({
               {!isOwn && showHeader && (
                 <div className="flex-shrink-0 mt-1">
                   <Avatar className="h-8 w-8 ring-2 ring-gray-100 dark:ring-gray-800">
-                    <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white">
+                    <AvatarFallback className="text-xs font-semibold bg-black text-white">
                       {getInitials(msg.user.email)}
                     </AvatarFallback>
                   </Avatar>
@@ -133,7 +133,7 @@ export const MessageArea = ({
                 <div
                   className={`relative px-4 py-2 rounded-2xl max-w-full break-words transition-all duration-200 group-hover:shadow-sm ${
                     isOwn
-                      ? "bg-blue-600 text-white rounded-br-md shadow-sm"
+                      ? "bg-black text-white rounded-br-md shadow-sm"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md"
                   }`}
                 >

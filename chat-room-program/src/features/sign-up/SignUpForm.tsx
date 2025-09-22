@@ -13,6 +13,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ export const SignUpForm = ({
       console.log("User signed up successfully:", data.data.user.id);
       signUpForm.reset();
       setToken(data.data.accessToken);
-      navigate("/");
+      navigate("/sign-in");
     },
     onError: (error) => {
       console.error("Error signing up:", error);
@@ -79,18 +80,21 @@ export const SignUpForm = ({
                   <FormLabel className="text-sm font-medium">Email</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                       <Input
                         type="email"
                         placeholder="Enter your email"
                         className="pl-10"
                         onChange={(e) => {
                           signUpForm.setValue("email", e.target.value);
+                          signUpForm.trigger("email");
                         }}
                         value={signUpForm.getValues("email") || ""}
                       />
                     </div>
                   </FormControl>
+                  {/* Move FormMessage outside of relative container */}
+                  <FormMessage className="text-xs text-red-500 mt-1" />
                 </FormItem>
               )}
             />
@@ -105,13 +109,14 @@ export const SignUpForm = ({
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10" />
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
                         className="pl-10 pr-10"
                         onChange={(e) => {
                           signUpForm.setValue("password", e.target.value);
+                          signUpForm.trigger("password");
                         }}
                         value={signUpForm.getValues("password") || ""}
                       />
@@ -119,7 +124,7 @@ export const SignUpForm = ({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent z-10"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
@@ -130,6 +135,8 @@ export const SignUpForm = ({
                       </Button>
                     </div>
                   </FormControl>
+                  {/* Move FormMessage outside of relative container */}
+                  <FormMessage className="text-xs text-red-500 mt-1" />
                 </FormItem>
               )}
             />

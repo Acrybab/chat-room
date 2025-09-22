@@ -4,13 +4,44 @@ import { useForm } from "react-hook-form";
 import { MessageCircle } from "lucide-react";
 import { useSignUpStore } from "@/store/signUp.store";
 import { SignUpForm } from "@/features/sign-up/SignUpForm";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 export interface SignUpFormValues {
   email: string;
   password: string;
 }
 
 export const SignUp = () => {
-  const signUpForm = useForm<SignUpFormValues>();
+  const SignUpSchema = z.object({
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Invalid email address")
+      .refine((val) => val.includes("@"), {
+        message: "Email must contain @",
+      }),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(16, "Password must be at most 16 characters")
+      .refine((val) => /[A-Z]/.test(val), {
+        message: "Password must contain at least one uppercase letter",
+      })
+      .refine((val) => /[0-9]/.test(val), {
+        message: "Password must contain at least one number",
+      })
+      .refine((val) => /[!@#$%^&*(),.?":{}|<>]/.test(val), {
+        message: "Password must contain at least one special character",
+      }),
+  });
+
+  const signUpForm = useForm<SignUpFormValues>({
+    resolver: zodResolver(SignUpSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
   const {
     showPassword,
     setShowPassword,
