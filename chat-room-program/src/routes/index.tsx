@@ -8,7 +8,11 @@ import { createBrowserRouter } from "react-router-dom";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Root />,
+    element: (
+      // <AuthProvider>
+      <Root />
+      // </AuthProvider>
+    ),
     children: [
       {
         index: true,

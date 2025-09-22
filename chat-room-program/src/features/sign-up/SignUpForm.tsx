@@ -38,7 +38,7 @@ export const SignUpForm = ({
 }: SignUpFormProps) => {
   const signUpFunction = async (data: SignUpFormValues) => {
     const response = await axios.post(
-      "http://localhost:3000/auth/signup",
+      "https://chat-room-be-production.up.railway.app/auth/signup",
       data
     );
     return response.data;

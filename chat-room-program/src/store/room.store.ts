@@ -6,13 +6,31 @@ export type Message = {
   roomId: number;
   isOwn: boolean;
 };
+export type Owner = {
+  id: number;
+  email: string;
+  isOnline: boolean;
+};
+
+export type Room = {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  isActive: boolean;
+  isPrivate: boolean;
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+  owner: Owner;
+  messages: Message[];
+  userRole: string;
+};
 
 export type OnlineUser = {
   id: string;
-  name: string;
-  status: string;
-  avatar: string;
-  role: string;
+  email: string;
+  isOnline: boolean;
 };
 
 type RoomState = {
@@ -24,6 +42,8 @@ type RoomState = {
   setOnlineUsers: (users: OnlineUser[]) => void;
   isTyping: boolean;
   setIsTyping: (isTyping: boolean) => void;
+  setRooms: (rooms: Room[]) => void;
+  rooms: Room[];
 };
 
 export const useRoomStore = create<RoomState>((set) => ({
@@ -35,4 +55,6 @@ export const useRoomStore = create<RoomState>((set) => ({
   setOnlineUsers: (users: OnlineUser[]) => set({ onlineUsers: users }),
   isTyping: false,
   setIsTyping: (isTyping: boolean) => set({ isTyping }),
+  rooms: [],
+  setRooms: (rooms: Room[]) => set({ rooms }),
 }));
