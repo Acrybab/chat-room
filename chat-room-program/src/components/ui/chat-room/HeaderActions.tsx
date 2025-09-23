@@ -23,6 +23,7 @@ import {
 // import { VideoCall } from "./VideoCall";
 import { SelectUserDialog } from "./SelectUserDialog";
 import { useState } from "react";
+import { socket } from "./socket";
 import { VideoCall } from "./VideoCall";
 
 interface HeaderActionsProps {
@@ -44,11 +45,6 @@ export const HeaderActions = ({
   roomId,
   setIsMemberSlideOpen,
   isMemberSlideOpen,
-  peerConnections,
-  remoteStreams,
-  setRemoteStreams,
-  stream,
-  setStream,
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
@@ -95,7 +91,18 @@ export const HeaderActions = ({
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              onClick={() => setIsCalling(true)}
+              onClick={() => {
+                if (userId && roomId) {
+                  // 📤 báo cho BE rằng user này bắt đầu gọi
+                  socket.emit("startCall", {
+                    roomId: Number(roomId),
+                    fromUserId: userId,
+                  });
+
+                  // mở UI VideoCall cho chính Caller
+                  setIsCalling(true);
+                }
+              }}
             >
               {/* <VideoCall /> */}
               <Video className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -107,14 +114,8 @@ export const HeaderActions = ({
         </Tooltip>
         {isCalling && userId && (
           <VideoCall
-            peerConnections={peerConnections}
-            remoteStreams={remoteStreams}
-            setRemoteStreams={setRemoteStreams}
-            setStream={setStream}
-            stream={stream}
             userId={userId}
             roomId={Number(roomId)}
-            active={isCalling}
             onClose={() => setIsCalling(false)}
           />
         )}

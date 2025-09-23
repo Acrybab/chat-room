@@ -21,6 +21,7 @@ import { getToken } from "@/lib/cookies";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { socket } from "@/components/ui/chat-room/socket";
 
 export const Room = () => {
   const { roomId } = useParams();
@@ -63,7 +64,35 @@ export const Room = () => {
     queryKey: ["onlineUsers"],
     queryFn: getOnlineUsers,
   });
+  const [incomingCall, setIncomingCall] = useState<null | {
+    roomId: number;
+    fromUserId: number;
+  }>(null);
+  const [accepted, setAccepted] = useState(false);
 
+  useEffect(() => {
+    socket.on("incomingGroupCall", (data) => {
+      console.log("📞 Incoming call:", data);
+      setIncomingCall(data); // { roomId, fromUserId }
+    });
+
+    return () => {
+      socket.off("incomingGroupCall");
+    };
+  }, []);
+
+  const handleAccept = () => {
+    if (incomingCall) {
+      setAccepted(true);
+    }
+  };
+
+  const handleReject = () => {
+    if (incomingCall) {
+      socket.emit("rejectCall", { roomId: incomingCall.roomId, userId: 123 }); // gửi cho BE
+      setIncomingCall(null);
+    }
+  };
   useEffect(() => {
     if (data) {
       setOnlineUsers(data.data.users);
@@ -159,6 +188,27 @@ export const Room = () => {
           isOpen={isMemberSlideOpen}
           onClose={() => setIsMemberSlideOpen(false)}
         />
+      )}
+      {incomingCall && !accepted && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-4 rounded shadow-lg">
+            <p>Người dùng {incomingCall.fromUserId} đang gọi...</p>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleAccept}
+                className="bg-green-600 text-white px-3 py-1 rounded"
+              >
+                Chấp nhận
+              </button>
+              <button
+                onClick={handleReject}
+                className="bg-red-600 text-white px-3 py-1 rounded"
+              >
+                Từ chối
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
