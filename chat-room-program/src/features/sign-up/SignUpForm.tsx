@@ -39,19 +39,19 @@ export const SignUpForm = ({
 }: SignUpFormProps) => {
   const signUpFunction = async (data: SignUpFormValues) => {
     const response = await axios.post(
-      "https://chat-room-be-production.up.railway.app/auth/signup",
+      "https://chat-room-be-production.up.railway.app/auth/sign-up",
       data
     );
     return response.data;
   };
   const navigate = useNavigate();
-  const { mutate: SignUp } = useMutation({
+  const { mutate: SignUp, isPending } = useMutation({
     mutationFn: signUpFunction,
     onSuccess: (data) => {
       console.log("User signed up successfully:", data.data.user.id);
-      signUpForm.reset();
       setToken(data.data.accessToken);
       navigate("/sign-in");
+      signUpForm.reset();
     },
     onError: (error) => {
       console.error("Error signing up:", error);
@@ -144,8 +144,12 @@ export const SignUpForm = ({
 
           {/* Submit Button */}
           <div className="pt-2">
-            <Button type="submit" className="w-full h-11 text-base font-medium">
-              Create Account
+            <Button
+              disabled={isPending}
+              type="submit"
+              className="w-full h-11 text-base font-medium"
+            >
+              {isPending ? "Creating Account..." : "Create Account"}{" "}
             </Button>
           </div>
         </form>
