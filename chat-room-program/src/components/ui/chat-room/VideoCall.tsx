@@ -177,6 +177,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       callId: string;
       answer: RTCSessionDescriptionInit;
     }) => {
+      console.log(callId)
       if (fromUserId === userId) return;
       const pc = peerConnections.get(fromUserId);
       if (!pc) return;
