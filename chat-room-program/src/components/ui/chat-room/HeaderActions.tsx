@@ -41,7 +41,6 @@ export const HeaderActions = ({
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
-  const peerId = 27; // ID của người bạn muốn gọi, tạm thời để cố định
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
@@ -97,7 +96,7 @@ export const HeaderActions = ({
         {isCalling && userId && (
           <VideoCall
             userId={userId}
-            peerId={peerId}
+            roomId={Number(roomId)}
             active={isCalling}
             onClose={() => setIsCalling(false)}
           />
