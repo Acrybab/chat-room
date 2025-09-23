@@ -52,7 +52,7 @@ export const Room = () => {
   });
 
   const { isLoggedIn } = useAuth();
-
+  console.log(isTyping, "is typing");
   const getOnlineUsers = async () => {
     const response = await axios.get(
       `https://chat-room-be-production.up.railway.app/users/members/${roomId}`
