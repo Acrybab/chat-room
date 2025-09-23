@@ -30,6 +30,13 @@ interface HeaderActionsProps {
   roomId: string | undefined;
   setIsMemberSlideOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isMemberSlideOpen: boolean;
+  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
+  stream: MediaStream | null;
+  remoteStreams: Record<number, MediaStream>;
+  setRemoteStreams: React.Dispatch<
+    React.SetStateAction<Record<number, MediaStream>>
+  >;
+  peerConnections: React.RefObject<Map<number, RTCPeerConnection>>;
 }
 
 export const HeaderActions = ({
@@ -37,6 +44,11 @@ export const HeaderActions = ({
   roomId,
   setIsMemberSlideOpen,
   isMemberSlideOpen,
+  peerConnections,
+  remoteStreams,
+  setRemoteStreams,
+  stream,
+  setStream,
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
@@ -95,6 +107,11 @@ export const HeaderActions = ({
         </Tooltip>
         {isCalling && userId && (
           <VideoCall
+            peerConnections={peerConnections}
+            remoteStreams={remoteStreams}
+            setRemoteStreams={setRemoteStreams}
+            setStream={setStream}
+            stream={stream}
             userId={userId}
             roomId={Number(roomId)}
             active={isCalling}
