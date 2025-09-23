@@ -25,7 +25,16 @@ class SocketManager {
         autoConnect: false,
         timeout: 5 * 60 * 1000,
       });
+      this.socket.on("incomingGroupCall", ({ roomId, fromUserId }) => {
+        console.log("📞 Incoming group call:", { roomId, fromUserId });
 
+        // Bạn có thể trigger event tới UI global (Redux, Zustand, Context API)
+        window.dispatchEvent(
+          new CustomEvent("incomingGroupCall", {
+            detail: { roomId, fromUserId },
+          })
+        );
+      });
       // Debug events
       this.socket.on("connect", () => {
         console.log("✅ Socket connected:", this.socket?.id);
