@@ -20,12 +20,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { getToken } from "@/lib/cookies";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const Room = () => {
   const { roomId } = useParams();
   const [isMemberSlideOpen, setIsMemberSlideOpen] = useState(false);
-
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<
+    Record<number, MediaStream>
+  >({});
   const { message, setMessage, onlineUsers, setOnlineUsers } = useRoomStore();
 
   const {
@@ -66,6 +69,7 @@ export const Room = () => {
       setOnlineUsers(data.data.users);
     }
   }, [data, setOnlineUsers]);
+  const peerConnections = useRef<Map<number, RTCPeerConnection>>(new Map());
 
   if (!getToken()) {
     return <Navigate to="/sign-in" replace />;
@@ -110,6 +114,11 @@ export const Room = () => {
                 </div>
               </div>
               <HeaderActions
+                setStream={setStream}
+                stream={stream}
+                remoteStreams={remoteStreams}
+                setRemoteStreams={setRemoteStreams}
+                peerConnections={peerConnections}
                 userId={userData?.data.user.id}
                 roomId={roomId}
                 setIsMemberSlideOpen={setIsMemberSlideOpen}

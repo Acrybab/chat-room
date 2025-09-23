@@ -1,12 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { socket } from "./socket";
 
 interface VideoCallProps {
   userId: number;
   roomId: number;
-  active: boolean; // bật/tắt call
+  active: boolean;
   onClose: () => void;
+  stream: MediaStream | null;
+  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
+  remoteStreams: Record<number, MediaStream>;
+  setRemoteStreams: React.Dispatch<
+    React.SetStateAction<Record<number, MediaStream>>
+  >;
+  peerConnections: React.MutableRefObject<Map<number, RTCPeerConnection>>;
 }
 
 export const VideoCall = ({
@@ -14,16 +20,15 @@ export const VideoCall = ({
   roomId,
   active,
   onClose,
+  peerConnections,
+  remoteStreams,
+  setRemoteStreams,
+  stream,
+  setStream,
 }: VideoCallProps) => {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<
-    Record<number, MediaStream>
-  >({});
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  // Lưu tất cả peer connections theo userId
-  const peerConnections = useRef<Map<number, RTCPeerConnection>>(new Map());
-
+  // ====== INIT CALL ======
   useEffect(() => {
     if (!active) {
       cleanup();
@@ -37,11 +42,12 @@ export const VideoCall = ({
           audio: true,
         });
         setStream(mediaStream);
+
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = mediaStream;
         }
 
-        // thông báo cho room rằng user này đã join call
+        // báo server mình đã startCall
         socket.emit("startCall", { roomId, fromUserId: userId });
       } catch (err) {
         console.error("Error accessing media devices", err);
@@ -50,7 +56,6 @@ export const VideoCall = ({
 
     init();
 
-    // cleanup khi unmount
     return () => cleanup();
   }, [active]);
 
@@ -64,68 +69,20 @@ export const VideoCall = ({
     setRemoteStreams({});
   };
 
-  // ====== Socket listeners ======
-  useEffect(() => {
-    if (!active) return;
-
-    // Có người trong room phát tín hiệu start call
-    socket.on("incomingGroupCall", ({ fromUserId }: { fromUserId: number }) => {
-      console.log(`📞 Incoming call in room ${roomId} from ${fromUserId}`);
-      createPeerConnection(fromUserId, true);
-    });
-
-    socket.on("offerFromUser", async (data: any) => {
-      const { fromUserId, offer } = data;
-      console.log(`📩 Offer from ${fromUserId}`);
-      const pc = createPeerConnection(fromUserId, false);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      socket.emit("answerToRoom", { roomId, fromUserId: userId, answer });
-    });
-
-    socket.on("answerFromUser", async (data: any) => {
-      const { fromUserId, answer } = data;
-      console.log(`📩 Answer from ${fromUserId}`);
-      const pc = peerConnections.current.get(fromUserId);
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      }
-    });
-
-    socket.on("iceCandidateFromUser", async (data: any) => {
-      const { fromUserId, candidate } = data;
-      const pc = peerConnections.current.get(fromUserId);
-      if (pc && candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-    });
-
-    return () => {
-      socket.off("incomingGroupCall");
-      socket.off("offerFromUser");
-      socket.off("answerFromUser");
-      socket.off("iceCandidateFromUser");
-    };
-  }, [active, stream]);
-
-  // ====== Helper to create peer connection ======
-  const createPeerConnection = (peerId: number, isInitiator: boolean) => {
-    if (peerConnections.current.has(peerId)) {
-      return peerConnections.current.get(peerId)!;
-    }
-
+  // ====== HANDLERS ======
+  const createPeerConnection = (peerId: number) => {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
 
-    // add local tracks
+    // add local stream
     if (stream) {
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
     }
 
-    // khi nhận track từ peer
+    // remote stream
     pc.ontrack = (event) => {
       setRemoteStreams((prev) => ({
         ...prev,
@@ -133,7 +90,7 @@ export const VideoCall = ({
       }));
     };
 
-    // ICE
+    // ice candidate
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit("iceCandidateToRoom", {
@@ -145,17 +102,62 @@ export const VideoCall = ({
     };
 
     peerConnections.current.set(peerId, pc);
+    return pc;
+  };
 
-    if (isInitiator) {
-      // tạo offer và gửi
+  // ====== SOCKET LISTENERS ======
+  useEffect(() => {
+    if (!active) return;
+
+    // khi có user start call
+    socket.on("incomingGroupCall", ({ fromUserId }) => {
+      if (fromUserId === userId) return; // ignore self
+
+      const pc = createPeerConnection(fromUserId);
+
       pc.createOffer().then((offer) => {
         pc.setLocalDescription(offer);
         socket.emit("offerToRoom", { roomId, fromUserId: userId, offer });
       });
-    }
+    });
 
-    return pc;
-  };
+    // khi nhận được offer
+    socket.on("offerFromUser", async ({ fromUserId, offer }) => {
+      if (fromUserId === userId) return;
+      const pc = createPeerConnection(fromUserId);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit("answerToRoom", { roomId, fromUserId: userId, answer });
+    });
+
+    // khi nhận được answer
+    socket.on("answerFromUser", async ({ fromUserId, answer }) => {
+      const pc = peerConnections.current.get(fromUserId);
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      }
+    });
+
+    // khi nhận ICE
+    socket.on("iceCandidateFromUser", async ({ fromUserId, candidate }) => {
+      const pc = peerConnections.current.get(fromUserId);
+      if (pc) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error("Error adding ICE", err);
+        }
+      }
+    });
+
+    return () => {
+      socket.off("incomingGroupCall");
+      socket.off("offerFromUser");
+      socket.off("answerFromUser");
+      socket.off("iceCandidateFromUser");
+    };
+  }, [active, stream]);
 
   if (!active) return null;
 
