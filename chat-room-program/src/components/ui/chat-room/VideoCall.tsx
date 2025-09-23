@@ -1,99 +1,43 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { socket } from "./socket";
 
 interface VideoCallProps {
-  userId: number;
   roomId: number;
-  active: boolean;
+  userId: number;
   onClose: () => void;
-  stream: MediaStream | null;
-  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
-  remoteStreams: Record<number, MediaStream>;
-  setRemoteStreams: React.Dispatch<
-    React.SetStateAction<Record<number, MediaStream>>
-  >;
-  peerConnections: React.MutableRefObject<Map<number, RTCPeerConnection>>;
 }
 
-export const VideoCall = ({
-  userId,
-  roomId,
-  active,
-  onClose,
-  peerConnections,
-  remoteStreams,
-  setRemoteStreams,
-  stream,
-  setStream,
-}: VideoCallProps) => {
+export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [peerConnections] = useState<Map<number, RTCPeerConnection>>(
+    () => new Map()
+  );
+  const [remoteStreams, setRemoteStreams] = useState<
+    Record<number, MediaStream>
+  >({});
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  // ====== INIT CALL ======
-  useEffect(() => {
-    if (!active) {
-      cleanup();
-      return;
-    }
+  // tạo PeerConnection cho 1 user
+  const createPeerConnection = (remoteUserId: number) => {
+    if (peerConnections.has(remoteUserId))
+      return peerConnections.get(remoteUserId)!;
 
-    const init = async () => {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        setStream(mediaStream);
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = mediaStream;
-        }
-
-        // báo server mình đã startCall
-        socket.emit("startCall", { roomId, fromUserId: userId });
-      } catch (err) {
-        console.error("Error accessing media devices", err);
-      }
-    };
-
-    init();
-
-    return () => cleanup();
-  }, [active]);
-
-  const cleanup = () => {
-    peerConnections.current.forEach((pc) => pc.close());
-    peerConnections.current.clear();
-    if (stream) {
-      stream.getTracks().forEach((t) => t.stop());
-    }
-    setStream(null);
-    setRemoteStreams({});
-  };
-
-  // ====== HANDLERS ======
-  const createPeerConnection = (peerId: number) => {
     const pc = new RTCPeerConnection({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
 
-    // add local stream
-    if (stream) {
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
-    }
-
-    // remote stream
+    // remote track
     pc.ontrack = (event) => {
       setRemoteStreams((prev) => ({
         ...prev,
-        [peerId]: event.streams[0],
+        [remoteUserId]: event.streams[0],
       }));
     };
 
-    // ice candidate
+    // ICE
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit("iceCandidateToRoom", {
+        socket.emit("iceCandidate", {
           roomId,
           fromUserId: userId,
           candidate: event.candidate,
@@ -101,82 +45,155 @@ export const VideoCall = ({
       }
     };
 
-    peerConnections.current.set(peerId, pc);
+    // add local tracks
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+    }
+
+    peerConnections.set(remoteUserId, pc);
     return pc;
   };
 
-  // ====== SOCKET LISTENERS ======
+  // lấy camera/mic
   useEffect(() => {
-    if (!active) return;
+    const init = async () => {
+      try {
+        const media = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        setStream(media);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = media;
+        }
+      } catch (err) {
+        console.error("❌ Error initStream:", err);
+      }
+    };
+    init();
 
-    // khi có user start call
-    socket.on("incomingGroupCall", ({ fromUserId }) => {
-      if (fromUserId === userId) return; // ignore self
+    return () => {
+      cleanupCall();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-      const pc = createPeerConnection(fromUserId);
+  // socket events
+  useEffect(() => {
+    // Khi có user accept call → tạo offer cho họ
+    socket.on("groupCallAccepted", async ({ userId: remoteUserId }) => {
+      if (remoteUserId === userId) return;
+      const pc = createPeerConnection(remoteUserId);
 
-      pc.createOffer().then((offer) => {
-        pc.setLocalDescription(offer);
-        socket.emit("offerToRoom", { roomId, fromUserId: userId, offer });
-      });
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("webrtcOffer", { roomId, fromUserId: userId, offer });
     });
 
-    // khi nhận được offer
-    socket.on("offerFromUser", async ({ fromUserId, offer }) => {
-      if (fromUserId === userId) return;
-      const pc = createPeerConnection(fromUserId);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit("answerToRoom", { roomId, fromUserId: userId, answer });
-    });
-
-    // khi nhận được answer
-    socket.on("answerFromUser", async ({ fromUserId, answer }) => {
-      const pc = peerConnections.current.get(fromUserId);
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    // Nhận danh sách participants khi mình accept call
+    socket.on("existingParticipants", async ({ participants }) => {
+      for (const remoteUserId of participants) {
+        const pc = createPeerConnection(remoteUserId);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit("webrtcOffer", { roomId, fromUserId: userId, offer });
       }
     });
 
-    // khi nhận ICE
-    socket.on("iceCandidateFromUser", async ({ fromUserId, candidate }) => {
-      const pc = peerConnections.current.get(fromUserId);
+    // Nhận offer
+    socket.on("webrtcOffer", async ({ fromUserId, offer }) => {
+      if (fromUserId === userId) return;
+      const pc = createPeerConnection(fromUserId);
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit("webrtcAnswer", { roomId, fromUserId: userId, answer });
+    });
+
+    // Nhận answer
+    socket.on("webrtcAnswer", async ({ fromUserId, answer }) => {
+      if (fromUserId === userId) return;
+      const pc = peerConnections.get(fromUserId);
+      if (!pc) return;
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    // Nhận ICE
+    socket.on("iceCandidate", async ({ fromUserId, candidate }) => {
+      if (fromUserId === userId) return;
+      const pc = peerConnections.get(fromUserId);
+      if (!pc) return;
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.error("❌ Error adding ICE", err);
+      }
+    });
+
+    // Khi user rời call
+    socket.on("groupParticipantLeft", ({ userId: remoteUserId }) => {
+      setRemoteStreams((prev) => {
+        const copy = { ...prev };
+        delete copy[remoteUserId];
+        return copy;
+      });
+      const pc = peerConnections.get(remoteUserId);
       if (pc) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error("Error adding ICE", err);
-        }
+        pc.close();
+        peerConnections.delete(remoteUserId);
       }
     });
 
     return () => {
-      socket.off("incomingGroupCall");
-      socket.off("offerFromUser");
-      socket.off("answerFromUser");
-      socket.off("iceCandidateFromUser");
+      socket.off("groupCallAccepted");
+      socket.off("existingParticipants");
+      socket.off("webrtcOffer");
+      socket.off("webrtcAnswer");
+      socket.off("iceCandidate");
+      socket.off("groupParticipantLeft");
     };
-  }, [active, stream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream]);
 
-  if (!active) return null;
+  // cleanup
+  const cleanupCall = () => {
+    socket.emit("leaveCall", { roomId, fromUserId: userId });
+
+    peerConnections.forEach((pc) => pc.close());
+    peerConnections.clear();
+
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+  };
+
+  const handleEndCall = () => {
+    cleanupCall();
+    onClose();
+  };
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-900 text-white rounded-lg shadow-lg p-4 z-50 w-[600px]">
-      <div className="grid grid-cols-2 gap-2">
+    <div className="fixed bottom-4 right-4 bg-gray-900 text-white rounded-lg shadow-lg p-4 z-50">
+      <div className="flex flex-wrap gap-2">
+        {/* Local video */}
         <video
           ref={localVideoRef}
           autoPlay
           playsInline
           muted
-          className="w-full h-40 bg-black rounded"
+          className="w-32 h-24 bg-black rounded"
         />
-        {Object.entries(remoteStreams).map(([peerId, s]) => (
+        {/* Remote videos */}
+        {Object.entries(remoteStreams).map(([uid, s]) => (
           <video
-            key={peerId}
+            key={uid}
             autoPlay
             playsInline
-            className="w-full h-40 bg-black rounded"
+            className="w-64 h-48 bg-black rounded"
             ref={(el) => {
               if (el) el.srcObject = s;
             }}
@@ -185,7 +202,7 @@ export const VideoCall = ({
       </div>
       <div className="flex justify-center mt-2">
         <button
-          onClick={onClose}
+          onClick={handleEndCall}
           className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
         >
           End Call
