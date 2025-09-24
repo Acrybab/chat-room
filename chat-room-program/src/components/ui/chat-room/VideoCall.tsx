@@ -25,6 +25,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [isInCall, setIsInCall] = useState(false);
   const [participants, setParticipants] = useState<Set<number>>(new Set());
+
   // 1️⃣ Init camera/mic
   useEffect(() => {
     const init = async () => {
@@ -317,6 +318,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
     currentCallId,
     isInCall,
     userId,
+    participants,
     createPeerConnection,
     peerConnections,
   ]);
@@ -381,6 +383,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
     setRemoteStreams({});
     setCurrentCallId(null);
     setIsInCall(false);
+    setParticipants(new Set());
     setParticipants(new Set());
   };
 
