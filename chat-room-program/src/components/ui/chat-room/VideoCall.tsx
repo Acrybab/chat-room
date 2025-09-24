@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { socket } from "./socket";
 
 interface VideoCallProps {
@@ -10,7 +10,6 @@ interface VideoCallProps {
 interface IncomingCall {
   callId: string;
   fromUserId: number;
-  pending: number[];
 }
 
 export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
@@ -23,7 +22,8 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
   >({});
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
-  const [acceptedCalls, setAcceptedCalls] = useState<string[]>([]); // changed Set -> Array
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null);
+  const [isInCall, setIsInCall] = useState(false);
 
   // 1️⃣ Init camera/mic
   useEffect(() => {
@@ -34,60 +34,84 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
           audio: true,
         });
         setStream(media);
-        if (localVideoRef.current) localVideoRef.current.srcObject = media;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = media;
+        }
       } catch (err) {
         console.error("❌ Error initStream:", err);
       }
     };
     init();
 
-    return cleanupCall;
+    return () => {
+      cleanupCall();
+    };
   }, []);
 
   // 2️⃣ Create PeerConnection
-  const createPeerConnection = (remoteUserId: number) => {
-    if (peerConnections.has(remoteUserId))
-      return peerConnections.get(remoteUserId)!;
+  const createPeerConnection = useCallback(
+    (remoteUserId: number) => {
+      if (peerConnections.has(remoteUserId)) {
+        return peerConnections.get(remoteUserId)!;
+      }
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
 
-    pc.ontrack = (event) => {
-      setRemoteStreams((prev) => ({
-        ...prev,
-        [remoteUserId]: event.streams[0],
-      }));
-    };
+      pc.ontrack = (event) => {
+        console.log("📹 Received remote stream from user:", remoteUserId);
+        setRemoteStreams((prev) => ({
+          ...prev,
+          [remoteUserId]: event.streams[0],
+        }));
+      };
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit("iceCandidate", {
-          roomId,
-          fromUserId: userId,
-          targetUserId: remoteUserId,
-          candidate: event.candidate,
+      pc.onicecandidate = (event) => {
+        if (event.candidate && currentCallId) {
+          socket.emit("iceCandidate", {
+            callId: currentCallId,
+            fromUserId: userId,
+            targetUserId: remoteUserId,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log(
+          `Connection state with ${remoteUserId}:`,
+          pc.connectionState
+        );
+      };
+
+      // Add local stream tracks to peer connection
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          pc.addTrack(track, stream);
         });
       }
-    };
 
-    if (stream)
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-    peerConnections.set(remoteUserId, pc);
-    return pc;
-  };
+      peerConnections.set(remoteUserId, pc);
+      return pc;
+    },
+    [stream, currentCallId, userId, peerConnections]
+  );
 
   // 3️⃣ Socket handlers
   useEffect(() => {
     const handleIncomingCall = (data: IncomingCall) => {
-      if (
-        data.pending.includes(userId) &&
-        !acceptedCalls.includes(data.callId)
-      ) {
-        console.log("📞 Incoming call", data);
+      console.log("📞 Incoming call", data);
+      if (!isInCall) {
+        // Chỉ nhận call mới nếu chưa trong call
         setIncomingCall(data);
       }
+    };
+
+    const handleCallStarted = ({ callId }: { callId: string }) => {
+      console.log("📞 Call started:", callId);
+      setCurrentCallId(callId);
+      setIsInCall(true);
     };
 
     const handleGroupCallAccepted = async ({
@@ -97,26 +121,29 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       userId: number;
       callId: string;
     }) => {
-      console.log("✅ group call accepted", remoteUserId, callId);
-      if (remoteUserId === userId) return;
-      const pc = createPeerConnection(remoteUserId);
-      if (!pc) return;
+      console.log("✅ User accepted call:", remoteUserId, callId);
+      if (remoteUserId === userId || callId !== currentCallId) return;
 
-      // Nếu stream chưa có, chờ stream sẵn sàng
+      const pc = createPeerConnection(remoteUserId);
+
+      // Wait for stream if not ready
       if (!stream) {
-        console.log("⏳ Stream chưa sẵn sàng, chờ 500ms...");
-        await new Promise((res) => setTimeout(res, 500));
+        console.log("⏳ Stream not ready, waiting...");
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("webrtcOffer", {
-        roomId,
-        fromUserId: userId,
-        targetUserId: remoteUserId,
-        callId,
-        offer,
-      });
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit("webrtcOffer", {
+          callId,
+          fromUserId: userId,
+          targetUserId: remoteUserId,
+          offer,
+        });
+      } catch (error) {
+        console.error("❌ Error creating offer:", error);
+      }
     };
 
     const handleExistingParticipants = async ({
@@ -126,22 +153,29 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       participants: number[];
       callId: string;
     }) => {
-      console.log(callId, "existing participants", participants);
-      if (!acceptedCalls.includes(callId)) return;
+      console.log("👥 Existing participants:", participants);
+      if (callId !== currentCallId) return;
+
       for (const remoteUserId of participants) {
         if (remoteUserId === userId) continue;
-        const pc = createPeerConnection(remoteUserId);
-        if (!pc) continue;
 
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit("webrtcOffer", {
-          roomId,
-          fromUserId: userId,
-          targetUserId: remoteUserId,
-          callId,
-          offer,
-        });
+        const pc = createPeerConnection(remoteUserId);
+
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit("webrtcOffer", {
+            callId,
+            fromUserId: userId,
+            targetUserId: remoteUserId,
+            offer,
+          });
+        } catch (error) {
+          console.error(
+            "❌ Error creating offer for existing participant:",
+            error
+          );
+        }
       }
     };
 
@@ -154,18 +188,25 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       callId: string;
       offer: RTCSessionDescriptionInit;
     }) => {
-      if (fromUserId === userId) return;
+      console.log("📩 Received offer from:", fromUserId);
+      if (fromUserId === userId || callId !== currentCallId) return;
+
       const pc = createPeerConnection(fromUserId);
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit("webrtcAnswer", {
-        roomId,
-        fromUserId: userId,
-        targetUserId: fromUserId,
-        callId,
-        answer,
-      });
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit("webrtcAnswer", {
+          callId,
+          fromUserId: userId,
+          targetUserId: fromUserId,
+          answer,
+        });
+      } catch (error) {
+        console.error("❌ Error handling offer:", error);
+      }
     };
 
     const handleAnswer = async ({
@@ -177,11 +218,20 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       callId: string;
       answer: RTCSessionDescriptionInit;
     }) => {
-      console.log(callId)
-      if (fromUserId === userId) return;
+      console.log("📩 Received answer from:", fromUserId);
+      if (fromUserId === userId || callId !== currentCallId) return;
+
       const pc = peerConnections.get(fromUserId);
-      if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      if (!pc) {
+        console.error("❌ PeerConnection not found for user:", fromUserId);
+        return;
+      }
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (error) {
+        console.error("❌ Error setting remote description:", error);
+      }
     };
 
     const handleIceCandidate = async ({
@@ -192,12 +242,20 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       candidate: RTCIceCandidateInit;
     }) => {
       if (fromUserId === userId) return;
+
       const pc = peerConnections.get(fromUserId);
-      if (!pc) return;
+      if (!pc) {
+        console.error(
+          "❌ PeerConnection not found for ICE candidate from:",
+          fromUserId
+        );
+        return;
+      }
+
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (err) {
-        console.error("❌ Error adding ICE", err);
+      } catch (error) {
+        console.error("❌ Error adding ICE candidate:", error);
       }
     };
 
@@ -206,11 +264,13 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
     }: {
       userId: number;
     }) => {
+      console.log("👋 Participant left:", remoteUserId);
       setRemoteStreams((prev) => {
         const copy = { ...prev };
         delete copy[remoteUserId];
         return copy;
       });
+
       const pc = peerConnections.get(remoteUserId);
       if (pc) {
         pc.close();
@@ -218,53 +278,102 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       }
     };
 
+    const handleCallError = ({ message }: { message: string }) => {
+      console.error("❌ Call error:", message);
+      alert(`Call error: ${message}`);
+    };
+
+    // Register event listeners
     socket.on("incomingGroupCall", handleIncomingCall);
+    socket.on("callStarted", handleCallStarted);
     socket.on("groupCallAccepted", handleGroupCallAccepted);
     socket.on("existingParticipants", handleExistingParticipants);
     socket.on("webrtcOffer", handleOffer);
     socket.on("webrtcAnswer", handleAnswer);
     socket.on("iceCandidate", handleIceCandidate);
     socket.on("groupParticipantLeft", handleParticipantLeft);
+    socket.on("callError", handleCallError);
 
     return () => {
       socket.off("incomingGroupCall", handleIncomingCall);
+      socket.off("callStarted", handleCallStarted);
       socket.off("groupCallAccepted", handleGroupCallAccepted);
       socket.off("existingParticipants", handleExistingParticipants);
       socket.off("webrtcOffer", handleOffer);
       socket.off("webrtcAnswer", handleAnswer);
       socket.off("iceCandidate", handleIceCandidate);
       socket.off("groupParticipantLeft", handleParticipantLeft);
+      socket.off("callError", handleCallError);
     };
   }, [
     stream,
-    acceptedCalls,
+    currentCallId,
+    isInCall,
     userId,
     createPeerConnection,
-    roomId,
     peerConnections,
   ]);
 
-  // 4️⃣ Accept call
-  const handleAccept = () => {
-    if (!incomingCall) return;
-    console.log("✅ Accepting call", incomingCall);
+  // 4️⃣ Start Call
+  const handleStartCall = () => {
+    if (isInCall) return;
 
-    socket.emit("acceptGroupCall", {
+    console.log("🚀 Starting call for room:", roomId);
+    socket.emit("startCall", {
       roomId,
       fromUserId: userId,
+    });
+  };
+
+  // 5️⃣ Accept call
+  const handleAccept = () => {
+    if (!incomingCall) return;
+
+    console.log("✅ Accepting call", incomingCall.callId);
+    setCurrentCallId(incomingCall.callId);
+    setIsInCall(true);
+
+    socket.emit("acceptGroupCall", {
       callId: incomingCall.callId,
+      fromUserId: userId,
+      roomId,
     });
 
-    setAcceptedCalls((prev) => [...prev, incomingCall.callId]);
     setIncomingCall(null);
   };
 
-  // 5️⃣ Cleanup
+  // 6️⃣ Reject call
+  const handleReject = () => {
+    if (!incomingCall) return;
+
+    console.log("❌ Rejecting call", incomingCall.callId);
+    socket.emit("rejectGroupCall", {
+      callId: incomingCall.callId,
+      fromUserId: userId,
+    });
+
+    setIncomingCall(null);
+  };
+
+  // 7️⃣ Cleanup
   const cleanupCall = () => {
-    socket.emit("leaveCall", { roomId, fromUserId: userId });
+    if (currentCallId) {
+      socket.emit("leaveCall", {
+        callId: currentCallId,
+        fromUserId: userId,
+      });
+    }
+
     peerConnections.forEach((pc) => pc.close());
     peerConnections.clear();
-    if (stream) stream.getTracks().forEach((t) => t.stop());
+
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+
+    setRemoteStreams({});
+    setCurrentCallId(null);
+    setIsInCall(false);
   };
 
   const handleEndCall = () => {
@@ -274,44 +383,99 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
 
   return (
     <div className="fixed bottom-4 right-4 bg-gray-900 text-white rounded-lg shadow-lg p-4 z-50">
+      {/* Incoming Call UI */}
       {incomingCall && (
+        <div className="mb-4 p-3 bg-blue-600 rounded">
+          <p className="text-sm mb-2">
+            Incoming call from User {incomingCall.fromUserId}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAccept}
+              className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+            >
+              Accept
+            </button>
+            <button
+              onClick={handleReject}
+              className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Start Call Button */}
+      {!isInCall && !incomingCall && (
         <div className="mb-2">
           <button
-            onClick={handleAccept}
-            className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+            onClick={handleStartCall}
+            className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm w-full"
           >
-            Accept Call
+            Start Video Call
           </button>
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-32 h-24 bg-black rounded"
-        />
-        {Object.entries(remoteStreams).map(([uid, s]) => (
-          <video
-            key={uid}
-            autoPlay
-            playsInline
-            className="w-64 h-48 bg-black rounded"
-            ref={(el) => {
-              if (el) el.srcObject = s;
-            }}
-          />
-        ))}
-      </div>
-      <div className="flex justify-center mt-2">
-        <button
-          onClick={handleEndCall}
-          className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm"
-        >
-          End Call
-        </button>
-      </div>
+
+      {/* Video Display */}
+      {isInCall && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {/* Local Video */}
+          <div className="relative">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-32 h-24 bg-black rounded"
+            />
+            <span className="absolute bottom-1 left-1 text-xs bg-black bg-opacity-50 px-1 rounded">
+              You
+            </span>
+          </div>
+
+          {/* Remote Videos */}
+          {Object.entries(remoteStreams).map(([uid, stream]) => (
+            <div key={uid} className="relative">
+              <video
+                autoPlay
+                playsInline
+                className="w-64 h-48 bg-black rounded"
+                ref={(el) => {
+                  if (el && el.srcObject !== stream) {
+                    el.srcObject = stream;
+                  }
+                }}
+              />
+              <span className="absolute bottom-1 left-1 text-xs bg-black bg-opacity-50 px-1 rounded">
+                User {uid}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Call Controls */}
+      {isInCall && (
+        <div className="flex justify-center">
+          <button
+            onClick={handleEndCall}
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-medium"
+          >
+            End Call
+          </button>
+        </div>
+      )}
+
+      {/* Call Status */}
+      {isInCall && (
+        <div className="text-xs text-gray-300 text-center mt-2">
+          Call ID: {currentCallId}
+          <br />
+          Connected: {Object.keys(remoteStreams).length} users
+        </div>
+      )}
     </div>
   );
 };
