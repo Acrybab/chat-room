@@ -24,7 +24,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [isInCall, setIsInCall] = useState(false);
-
+  const [participants, setParticipants] = useState<Set<number>>(new Set());
   // 1️⃣ Init camera/mic
   useEffect(() => {
     const init = async () => {
@@ -108,10 +108,17 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
       }
     };
 
-    const handleCallStarted = ({ callId }: { callId: string }) => {
+    const handleCallStarted = ({
+      callId,
+      participants: initialParticipants,
+    }: {
+      callId: string;
+      participants: number[];
+    }) => {
       console.log("📞 Call started:", callId);
       setCurrentCallId(callId);
       setIsInCall(true);
+      setParticipants(new Set(initialParticipants));
     };
 
     const handleGroupCallAccepted = async ({
@@ -374,6 +381,7 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
     setRemoteStreams({});
     setCurrentCallId(null);
     setIsInCall(false);
+    setParticipants(new Set());
   };
 
   const handleEndCall = () => {
@@ -473,7 +481,8 @@ export const VideoCall = ({ roomId, userId, onClose }: VideoCallProps) => {
         <div className="text-xs text-gray-300 text-center mt-2">
           Call ID: {currentCallId}
           <br />
-          Connected: {Object.keys(remoteStreams).length} users
+          Participants: {participants.size} | Video streams:{" "}
+          {Object.keys(remoteStreams).length}
         </div>
       )}
     </div>
