@@ -5,14 +5,7 @@ import {
   TooltipTrigger,
 } from "../tooltip";
 import { Button } from "../button";
-import {
-  MoreVertical,
-  Search,
-  Settings,
-  UserPlus,
-  Users,
-  Video,
-} from "lucide-react";
+import { MoreVertical, Search, Settings, UserPlus, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,21 +16,13 @@ import {
 // import { VideoCall } from "./VideoCall";
 import { SelectUserDialog } from "./SelectUserDialog";
 import { useState } from "react";
-import { socket } from "./socket";
-import { VideoCall } from "./VideoCall";
+import { VideoChat } from "./VideoChat";
 
 interface HeaderActionsProps {
   userId: number | undefined;
   roomId: string | undefined;
   setIsMemberSlideOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isMemberSlideOpen: boolean;
-  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
-  stream: MediaStream | null;
-  remoteStreams: Record<number, MediaStream>;
-  setRemoteStreams: React.Dispatch<
-    React.SetStateAction<Record<number, MediaStream>>
-  >;
-  peerConnections: React.RefObject<Map<number, RTCPeerConnection>>;
 }
 
 export const HeaderActions = ({
@@ -48,7 +33,7 @@ export const HeaderActions = ({
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
-  const [isCalling, setIsCalling] = useState(false);
+
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
@@ -68,62 +53,26 @@ export const HeaderActions = ({
           </TooltipContent>
         </Tooltip>
 
-        {/* Voice Call Button - Commented out but keeping structure */}
-        {/* <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <Phone className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            Start voice call
-          </TooltipContent>
-        </Tooltip> */}
-
-        {/* Video Call Button - Commented out but keeping structure */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              onClick={() => {
-                if (userId && roomId) {
-                  // 📤 báo cho BE rằng user này bắt đầu gọi
-                  socket.emit("startCall", {
-                    roomId: Number(roomId),
-                    fromUserId: userId,
-                  });
-
-                  // mở UI VideoCall cho chính Caller
-                  setIsCalling(true);
-                }
-              }}
             >
               {/* <VideoCall /> */}
-              <Video className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <VideoChat identity={userId} roomId={roomId} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
             Start video call
           </TooltipContent>
         </Tooltip>
-        {isCalling && userId && (
-          <VideoCall
-            userId={userId}
-            roomId={Number(roomId)}
-            onClose={() => setIsCalling(false)}
-          />
-        )}
+
         <Button onClick={() => setIsMemberSlideOpen(!isMemberSlideOpen)}>
           <Users className="h-4 w-4" />
         </Button>
       </TooltipProvider>
-
       {/* More Actions Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -163,7 +112,6 @@ export const HeaderActions = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
       {/* Select User Dialog */}
       <SelectUserDialog
         roomId={roomId}
@@ -171,6 +119,14 @@ export const HeaderActions = ({
         openDialog={openDialog}
         setOpenDialog={setOpenDialog}
       />
+      {/* {callOpen && (
+        <VideoCallModal
+          roomId={Number(roomId)}
+          userId={Number(userId)}
+          socket={socket}
+          onClose={() => setCallOpen(false)}
+        />
+      )} */}
     </div>
   );
 };

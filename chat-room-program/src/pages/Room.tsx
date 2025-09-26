@@ -20,16 +20,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { getToken } from "@/lib/cookies";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { socket } from "@/components/ui/chat-room/socket";
-
+import { useEffect, useState } from "react";
 export const Room = () => {
   const { roomId } = useParams();
   const [isMemberSlideOpen, setIsMemberSlideOpen] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<
-    Record<number, MediaStream>
-  >({});
   const { message, setMessage, onlineUsers, setOnlineUsers } = useRoomStore();
 
   const {
@@ -52,7 +46,6 @@ export const Room = () => {
   });
 
   const { isLoggedIn } = useAuth();
-  console.log(isTyping, "is typing");
   const getOnlineUsers = async () => {
     const response = await axios.get(
       `https://chat-room-be-production.up.railway.app/users/members/${roomId}`
@@ -64,42 +57,12 @@ export const Room = () => {
     queryKey: ["onlineUsers"],
     queryFn: getOnlineUsers,
   });
-  const [incomingCall, setIncomingCall] = useState<null | {
-    roomId: number;
-    fromUserId: number;
-  }>(null);
-  const [accepted, setAccepted] = useState(false);
 
-  useEffect(() => {
-    socket.on("incomingGroupCall", (data) => {
-      console.log("📞 Incoming call:", data);
-      setIncomingCall(data); // { roomId, fromUserId }
-    });
-
-    return () => {
-      socket.off("incomingGroupCall");
-    };
-  }, []);
-
-  const handleAccept = () => {
-    if (incomingCall) {
-      setAccepted(true);
-    }
-  };
-
-  const handleReject = () => {
-    if (incomingCall) {
-      socket.emit("rejectCall", { roomId: incomingCall.roomId, userId: 123 }); // gửi cho BE
-      setIncomingCall(null);
-    }
-  };
   useEffect(() => {
     if (data) {
       setOnlineUsers(data.data.users);
     }
   }, [data, setOnlineUsers]);
-  const peerConnections = useRef<Map<number, RTCPeerConnection>>(new Map());
-
   if (!getToken()) {
     return <Navigate to="/sign-in" replace />;
   }
@@ -143,11 +106,6 @@ export const Room = () => {
                 </div>
               </div>
               <HeaderActions
-                setStream={setStream}
-                stream={stream}
-                remoteStreams={remoteStreams}
-                setRemoteStreams={setRemoteStreams}
-                peerConnections={peerConnections}
                 userId={userData?.data.user.id}
                 roomId={roomId}
                 setIsMemberSlideOpen={setIsMemberSlideOpen}
@@ -188,27 +146,6 @@ export const Room = () => {
           isOpen={isMemberSlideOpen}
           onClose={() => setIsMemberSlideOpen(false)}
         />
-      )}
-      {incomingCall && !accepted && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-          <div className="bg-white p-4 rounded shadow-lg">
-            <p>Người dùng {incomingCall.fromUserId} đang gọi...</p>
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={handleAccept}
-                className="bg-green-600 text-white px-3 py-1 rounded"
-              >
-                Chấp nhận
-              </button>
-              <button
-                onClick={handleReject}
-                className="bg-red-600 text-white px-3 py-1 rounded"
-              >
-                Từ chối
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
