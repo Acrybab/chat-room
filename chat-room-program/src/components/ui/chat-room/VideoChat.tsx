@@ -128,91 +128,180 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "20px",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        background: "#1c1e21",
+        padding: "0",
+        fontFamily: "Helvetica, Arial, sans-serif",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
+      {/* Header giống Messenger */}
       <div
         style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(20px)",
-          borderRadius: "24px",
-          padding: "32px",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          boxShadow: "0 25px 50px rgba(0, 0, 0, 0.15)",
+          background: "#242526",
+          borderBottom: "1px solid #3e4042",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "32px",
-            position: "relative",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div
             style={{
-              position: "absolute",
-              left: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "12px",
-              height: "12px",
+              width: "32px",
+              height: "32px",
+              background: "linear-gradient(45deg, #0099ff, #0078d4)",
               borderRadius: "50%",
-              background: room
-                ? "linear-gradient(45deg, #00ff87, #60efff)"
-                : "#ff6b6b",
-              boxShadow: room
-                ? "0 0 20px rgba(0, 255, 135, 0.5)"
-                : "0 0 20px rgba(255, 107, 107, 0.5)",
-              animation: "pulse 2s infinite",
-            }}
-          />
-          <h3
-            style={{
-              color: "white",
-              fontSize: "28px",
-              fontWeight: "700",
-              margin: 0,
-              textAlign: "center",
-              textShadow: "0 2px 20px rgba(0, 0, 0, 0.3)",
-              letterSpacing: "-0.5px",
-            }}
-          >
-            Room: {roomId}
-          </h3>
-          <div
-            style={{
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "rgba(255, 255, 255, 0.15)",
-              padding: "8px 16px",
-              borderRadius: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               color: "white",
               fontSize: "14px",
-              fontWeight: "500",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
+              fontWeight: "bold",
             }}
           >
-            {room ? `Connected` : "Connecting..."}
+            📹
+          </div>
+          <div>
+            <h3
+              style={{
+                color: "#e4e6ea",
+                fontSize: "16px",
+                fontWeight: "600",
+                margin: 0,
+                lineHeight: "20px",
+              }}
+            >
+              Room: {roomId}
+            </h3>
+            <div
+              style={{
+                color: "#b0b3b8",
+                fontSize: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginTop: "2px",
+              }}
+            >
+              <div
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: room ? "#42b883" : "#ff4757",
+                  boxShadow: room
+                    ? "0 0 8px rgba(66, 184, 131, 0.6)"
+                    : "0 0 8px rgba(255, 71, 87, 0.6)",
+                }}
+              />
+              {room ? "Connected" : "Connecting..."}
+            </div>
           </div>
         </div>
 
+        {/* Action buttons giống Messenger */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              color: "#b0b3b8",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "18px",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) =>
+              ((e.target as HTMLButtonElement).style.background =
+                "rgba(255, 255, 255, 0.2)")
+            }
+            onMouseLeave={(e) =>
+              ((e.target as HTMLButtonElement).style.background =
+                "rgba(255, 255, 255, 0.1)")
+            }
+          >
+            🎤
+          </button>
+          <button
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              color: "#b0b3b8",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "18px",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) =>
+              ((e.target as HTMLButtonElement).style.background =
+                "rgba(255, 255, 255, 0.2)")
+            }
+            onMouseLeave={(e) =>
+              ((e.target as HTMLButtonElement).style.background =
+                "rgba(255, 255, 255, 0.1)")
+            }
+          >
+            📷
+          </button>
+          <button
+            style={{
+              background: "#e41e3f",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              color: "white",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "18px",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) =>
+              ((e.target as HTMLButtonElement).style.background = "#d11a36")
+            }
+            onMouseLeave={(e) =>
+              ((e.target as HTMLButtonElement).style.background = "#e41e3f")
+            }
+          >
+            📞
+          </button>
+        </div>
+      </div>
+
+      {/* Video Grid */}
+      <div
+        style={{
+          flex: 1,
+          padding: "16px",
+          overflow: "auto",
+        }}
+      >
         <div
           id="video-grid"
           ref={gridRef}
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "20px",
-            marginTop: "16px",
+            gap: "16px",
+            height: "100%",
+            alignContent: "start",
           }}
         />
       </div>
@@ -220,104 +309,115 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-            50% { opacity: 0.7; transform: translateY(-50%) scale(1.1); }
-          }
-          
-          @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-          }
-          
           .participant {
             position: relative;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #242526;
+            border-radius: 16px;
             overflow: hidden;
-            animation: fadeIn 0.5s ease-out;
+            aspect-ratio: 16/9;
+            border: 2px solid #3e4042;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
           }
           
           .participant:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: #0099ff;
+            transform: scale(1.02);
+            box-shadow: 0 4px 16px rgba(0, 153, 255, 0.2);
           }
           
           .participant video {
             width: 100%;
-            height: auto;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            background: #1a1a2e;
+            height: 100%;
+            object-fit: cover;
+            background: #1c1e21;
           }
           
           .label {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+            bottom: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 14px;
-            text-align: center;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            letter-spacing: 0.3px;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            max-width: calc(100% - 24px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             z-index: 10;
           }
           
+          /* Local participant (You) styling */
+          .participant:first-child {
+            border-color: #0099ff;
+          }
+          
           .participant:first-child .label {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.8));
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            background: rgba(0, 153, 255, 0.9);
+            border-color: rgba(0, 153, 255, 0.3);
+          }
+          
+          /* Empty state for participant without video */
+          .participant:not(:has(video)) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2d3748, #1a202c);
+          }
+          
+          .participant:not(:has(video))::before {
+            content: "👤";
+            font-size: 48px;
+            opacity: 0.3;
           }
           
           /* Responsive design */
           @media (max-width: 768px) {
             #video-grid {
               grid-template-columns: 1fr !important;
-              gap: 16px !important;
+              gap: 12px !important;
             }
             
             .participant {
-              padding: 12px;
+              aspect-ratio: 4/3;
             }
             
             .label {
-              bottom: 16px;
-              left: 16px;
-              right: 16px;
-              padding: 10px 14px;
-              font-size: 13px;
+              bottom: 8px;
+              left: 8px;
+              padding: 4px 8px;
+              font-size: 12px;
+              max-width: calc(100% - 16px);
             }
           }
           
-          /* Beautiful scrollbar */
+          @media (min-width: 1200px) {
+            #video-grid {
+              grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+            }
+          }
+          
+          /* Scrollbar styling */
           ::-webkit-scrollbar {
             width: 8px;
           }
           
           ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+            background: #1c1e21;
           }
           
           ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
+            background: #3e4042;
             border-radius: 4px;
           }
           
           ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
+            background: #4e5052;
           }
         `,
         }}
