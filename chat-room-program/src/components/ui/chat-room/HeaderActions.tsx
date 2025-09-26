@@ -5,7 +5,14 @@ import {
   TooltipTrigger,
 } from "../tooltip";
 import { Button } from "../button";
-import { MoreVertical, Search, Settings, UserPlus, Users } from "lucide-react";
+import {
+  MoreVertical,
+  Search,
+  Settings,
+  UserPlus,
+  Users,
+  Video,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +40,7 @@ export const HeaderActions = ({
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
-
+  const [callOpen, setCallOpen] = useState(false);
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
@@ -56,12 +63,13 @@ export const HeaderActions = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
+              onClick={() => setCallOpen(true)}
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               {/* <VideoCall /> */}
-              <VideoChat identity={userId} roomId={roomId} />
+              <Video />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
@@ -127,6 +135,7 @@ export const HeaderActions = ({
           onClose={() => setCallOpen(false)}
         />
       )} */}
+      {callOpen && <VideoChat roomId={roomId} identity={userId} />}
     </div>
   );
 };
