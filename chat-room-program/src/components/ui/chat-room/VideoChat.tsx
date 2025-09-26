@@ -10,6 +10,7 @@ interface VideoChatProps {
 export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [room, setRoom] = useState<Video.Room | null>(null);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   useEffect(() => {
     let active = true;
@@ -124,6 +125,29 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
     document.getElementById(sid)?.remove();
   }
 
+  // Tắt/bật mic
+  const toggleMute = () => {
+    if (room) {
+      room.localParticipant.audioTracks.forEach((publication) => {
+        if (publication.track) {
+          if (isMuted) {
+            publication.track.enable();
+          } else {
+            publication.track.disable();
+          }
+        }
+      });
+      setIsMuted(!isMuted);
+    }
+  };
+
+  // Kết thúc cuộc gọi
+  const endCall = () => {
+    if (room) {
+      room.disconnect();
+    }
+  };
+
   return (
     <div
       style={{
@@ -207,30 +231,34 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
         {/* Action buttons giống Messenger */}
         <div style={{ display: "flex", gap: "8px" }}>
           <button
+            onClick={toggleMute}
             style={{
-              background: "rgba(255, 255, 255, 0.1)",
+              background: isMuted ? "#e41e3f" : "rgba(255, 255, 255, 0.1)",
               border: "none",
               borderRadius: "50%",
               width: "40px",
               height: "40px",
-              color: "#b0b3b8",
+              color: isMuted ? "white" : "#b0b3b8",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "18px",
-              transition: "background 0.2s",
+              transition: "all 0.2s",
             }}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLButtonElement).style.background =
-                "rgba(255, 255, 255, 0.2)")
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLButtonElement).style.background =
-                "rgba(255, 255, 255, 0.1)")
-            }
+            onMouseEnter={(e) => {
+              if (!isMuted)
+                (e.target as HTMLElement).style.background =
+                  "rgba(255, 255, 255, 0.2)";
+            }}
+            onMouseLeave={(e) => {
+              if (!isMuted)
+                (e.target as HTMLElement).style.background =
+                  "rgba(255, 255, 255, 0.1)";
+            }}
+            title={isMuted ? "Bật mic" : "Tắt mic"}
           >
-            🎤
+            {isMuted ? "🔇" : "🎤"}
           </button>
           <button
             style={{
@@ -248,17 +276,19 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
               transition: "background 0.2s",
             }}
             onMouseEnter={(e) =>
-              ((e.target as HTMLButtonElement).style.background =
+              ((e.target as HTMLElement).style.background =
                 "rgba(255, 255, 255, 0.2)")
             }
             onMouseLeave={(e) =>
-              ((e.target as HTMLButtonElement).style.background =
+              ((e.target as HTMLElement).style.background =
                 "rgba(255, 255, 255, 0.1)")
             }
+            title="Tắt/bật camera"
           >
             📷
           </button>
           <button
+            onClick={endCall}
             style={{
               background: "#e41e3f",
               border: "none",
@@ -279,6 +309,7 @@ export const VideoChat = ({ identity, roomId }: VideoChatProps) => {
             onMouseLeave={(e) =>
               ((e.target as HTMLButtonElement).style.background = "#e41e3f")
             }
+            title="Kết thúc cuộc gọi"
           >
             📞
           </button>
