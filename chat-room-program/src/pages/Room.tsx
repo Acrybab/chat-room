@@ -21,11 +21,32 @@ import { getToken } from "@/lib/cookies";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { socket } from "@/components/ui/chat-room/socket";
+import { IsComingCallModal } from "@/components/ui/chat-room/IsComingCallModal";
+import { VideoChat } from "@/components/ui/chat-room/VideoChat";
+export interface InComingCallData {
+  roomId: string;
+  callType: string;
+  callId: string;
+  participants: number[];
+  initiator: {
+    id: number;
+    email: string;
+  };
+}
 export const Room = () => {
   const { roomId } = useParams();
   const [isMemberSlideOpen, setIsMemberSlideOpen] = useState(false);
   const { message, setMessage, onlineUsers, setOnlineUsers } = useRoomStore();
+  const [isCommingCall, setIsCommingCall] = useState<InComingCallData>(
+    {} as InComingCallData
+  );
+  const [isOpenCallModal, setIsOpenCallModal] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
 
+  const handleClose = () => {
+    setCallOpen(false);
+  };
   const {
     messagesEndRef,
     inputRef,
@@ -63,15 +84,40 @@ export const Room = () => {
       setOnlineUsers(data.data.users);
     }
   }, [data, setOnlineUsers]);
+
+  useEffect(() => {
+    const handleIncomingCall = (data: InComingCallData) => {
+      console.log("Incoming call:", data);
+      setIsCommingCall(data);
+      setIsOpenCallModal(true);
+    };
+
+    socket.on("inComingGroupCall", handleIncomingCall);
+
+    return () => {
+      socket.off("inComingGroupCall", handleIncomingCall);
+    };
+  }, []);
+
   if (!getToken()) {
     return <Navigate to="/sign-in" replace />;
   }
+
   if (!isLoggedIn) {
     return <Navigate to="/sign-in" replace />;
   }
 
   const navigateBack = () => {
     window.history.back();
+  };
+
+  const handleCloseModal = () => {
+    socket.emit("endCall", {
+      roomId: isCommingCall.roomId,
+      callId: isCommingCall.callId,
+      userId: userData?.data.user.id,
+    });
+    setIsOpenCallModal(false);
   };
 
   return (
@@ -145,6 +191,26 @@ export const Room = () => {
           getStatusColor={getStatusColor}
           isOpen={isMemberSlideOpen}
           onClose={() => setIsMemberSlideOpen(false)}
+        />
+      )}
+
+      {isOpenCallModal && (
+        <IsComingCallModal
+          isOpenCallModal={isOpenCallModal}
+          setIsOpenCallModal={setIsOpenCallModal}
+          handleCloseModal={handleCloseModal}
+          isCommingCall={isCommingCall}
+          setCallOpen={setCallOpen}
+        />
+      )}
+
+      {callOpen && (
+        <VideoChat
+          isCommingCall={isCommingCall}
+          isOpen={callOpen}
+          identity={userData?.data.user.id}
+          onClose={handleClose}
+          roomId={roomId}
         />
       )}
     </div>
