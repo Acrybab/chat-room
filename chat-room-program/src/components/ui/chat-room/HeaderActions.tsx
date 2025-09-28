@@ -23,7 +23,8 @@ import {
 // import { VideoCall } from "./VideoCall";
 import { SelectUserDialog } from "./SelectUserDialog";
 import { useState } from "react";
-import { VideoChat } from "./VideoChat";
+// import { VideoChat } from "./VideoChat";
+import { socket } from "./socket";
 
 interface HeaderActionsProps {
   userId: number | undefined;
@@ -40,7 +41,15 @@ export const HeaderActions = ({
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
+
+  const handleStartCall = () => {
+    socket.emit("startCall", {
+      roomId: Number(roomId),
+      userId: Number(userId),
+      callType: "video",
+    });
+  };
+
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
@@ -63,7 +72,7 @@ export const HeaderActions = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              onClick={() => setCallOpen(true)}
+              onClick={handleStartCall}
               variant="ghost"
               size="icon"
               className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -135,7 +144,9 @@ export const HeaderActions = ({
           onClose={() => setCallOpen(false)}
         />
       )} */}
-      {callOpen && <VideoChat roomId={roomId} identity={userId} />}
+      {/* {callOpen && (
+        <VideoChat roomId={roomId} identity={userId} onClose={handleClose} />
+      )} */}
     </div>
   );
 };
