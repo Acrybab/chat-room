@@ -152,6 +152,7 @@ export const Room = () => {
                 </div>
               </div>
               <HeaderActions
+                setCallOpen={setCallOpen}
                 userId={userData?.data.user.id}
                 roomId={roomId}
                 setIsMemberSlideOpen={setIsMemberSlideOpen}

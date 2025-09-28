@@ -31,6 +31,7 @@ interface HeaderActionsProps {
   roomId: string | undefined;
   setIsMemberSlideOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isMemberSlideOpen: boolean;
+  setCallOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const HeaderActions = ({
@@ -38,6 +39,7 @@ export const HeaderActions = ({
   roomId,
   setIsMemberSlideOpen,
   isMemberSlideOpen,
+  setCallOpen,
 }: HeaderActionsProps) => {
   console.log(userId, roomId, "header actions props");
   const [openDialog, setOpenDialog] = useState(false);
@@ -48,6 +50,7 @@ export const HeaderActions = ({
       userId: Number(userId),
       callType: "video",
     });
+    setCallOpen(true);
   };
 
   return (

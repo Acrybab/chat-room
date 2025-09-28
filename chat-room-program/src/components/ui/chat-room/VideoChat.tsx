@@ -2,11 +2,12 @@
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import * as Video from "twilio-video";
-import { Dialog, DialogContent } from "../dialog";
+import { Dialog, DialogContent, DialogHeader } from "../dialog";
 import { Button } from "../button";
 import { Mic, MicOff, Video as VideoIcon, Phone } from "lucide-react";
 import { socket } from "./socket";
 import type { InComingCallData } from "@/pages/Room";
+import { DialogTitle } from "@radix-ui/react-dialog";
 
 interface VideoChatProps {
   identity: number | undefined;
@@ -178,6 +179,9 @@ export const VideoChat = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && endCall()}>
+      <DialogHeader>
+        <DialogTitle></DialogTitle>
+      </DialogHeader>
       <DialogContent className="max-w-6xl h-[80vh] p-0 gap-0 bg-[#1c1e21] border-[#3e4042]">
         {/* Header */}
         <div className="bg-[#242526] border-b border-[#3e4042] p-4 flex items-center justify-between sticky top-0 z-10">
