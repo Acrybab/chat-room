@@ -4,6 +4,7 @@ import useHomeStore from "@/store/home.store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 export type CreateRoomType = {
   data: { roomName: string; description: string; roomCategory: string };
 };
@@ -49,15 +50,24 @@ export const useHomePage = () => {
   const queryClient = useQueryClient();
   const { mutate: createChatRoom } = useMutation({
     mutationFn: createChatRoomFunction,
-    onSuccess: (data) => {
+    onSuccess: () => {
       setIsOpenDialog(false);
       setRoomName("");
       setRoomDescription("");
       queryClient.invalidateQueries({ queryKey: ["chatRooms"] });
-      console.log("Chat room created successfully:", data);
+      toast.success("Chat room created successfully!", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-green-500 text-white font-semibold shadow-lg",
+      });
     },
     onError: (error) => {
       console.error("Error creating chat room:", error);
+      toast.error("Failed to create chat room. Please try again.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
     },
   });
 
@@ -66,6 +76,31 @@ export const useHomePage = () => {
     description: string,
     roomCategory: string
   ) => {
+    if (!roomName.trim()) {
+      toast.error("Room name cannot be empty.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
+      return;
+    }
+    if (!description.trim()) {
+      toast.error("Description cannot be empty.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
+      return;
+    }
+    if (!roomCategory.trim()) {
+      toast.error("Category cannot be empty.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
+      return;
+    }
+
     createChatRoom({ data: { roomName, description, roomCategory } });
   };
 

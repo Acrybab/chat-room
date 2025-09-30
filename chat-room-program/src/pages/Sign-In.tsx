@@ -17,6 +17,7 @@ import { socket } from "@/components/ui/chat-room/socket";
 import { useAuth } from "@/hooks/useAuth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 
 export interface SignInForm {
   email: string;
@@ -103,9 +104,19 @@ export const SignIn = () => {
       });
 
       navigate("/");
+      toast.success("Successfully signed in!", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-green-500 text-white font-semibold shadow-lg",
+      });
     },
     onError: (error) => {
       console.log(error);
+      toast.error("Failed to sign in. Please check your credentials.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
     },
   });
 
