@@ -1,5 +1,4 @@
 import { AuthContext } from "@/auth/AuthContext";
-import { getToken } from "@/lib/cookies";
 import type { MeResponse } from "@/types/chatRoom.types";
 import type { User } from "@/types/user.types";
 import { useQuery } from "@tanstack/react-query";
@@ -96,9 +95,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await axios.get(
       "https://chat-room-be-production.up.railway.app/auth/profile",
       {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
         withCredentials: true,
       }
     );
