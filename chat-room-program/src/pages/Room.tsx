@@ -79,6 +79,7 @@ export const Room = () => {
     queryFn: getOnlineUsers,
   });
 
+  console.log(userData, "userData");
   useEffect(() => {
     if (data) {
       setOnlineUsers(data.data.users);
