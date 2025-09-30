@@ -92,10 +92,10 @@ export const Room = () => {
       setIsOpenCallModal(true);
     };
 
-    socket.on("inComingGroupCall", handleIncomingCall);
+    socket?.on("inComingGroupCall", handleIncomingCall);
 
     return () => {
-      socket.off("inComingGroupCall", handleIncomingCall);
+      socket?.off("inComingGroupCall", handleIncomingCall);
     };
   }, []);
 
@@ -112,7 +112,7 @@ export const Room = () => {
   };
   const roomName = roomDetail?.data.chatRoom.name;
   const handleCloseModal = () => {
-    socket.emit("endCall", {
+    socket?.emit("endCall", {
       roomId: isCommingCall.roomId,
       callId: isCommingCall.callId,
       userId: userData?.data.user.id,
