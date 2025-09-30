@@ -23,6 +23,7 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { setToken } from "@/lib/cookies";
+import { toast } from "sonner";
 
 interface SignUpFormProps {
   signUpForm: UseFormReturn<SignUpFormValues, unknown, SignUpFormValues>;
@@ -52,9 +53,19 @@ export const SignUpForm = ({
       setToken(data.data.accessToken);
       navigate("/sign-in");
       signUpForm.reset();
+      toast.success("Account created successfully! Please sign in.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-green-500 text-white font-semibold shadow-lg",
+      });
     },
     onError: (error) => {
       console.error("Error signing up:", error);
+      toast.error("Failed to create account. Please try again.", {
+        position: "top-right",
+        duration: 4000,
+        className: "bg-red-500 text-white font-semibold shadow-lg",
+      });
     },
   });
 
