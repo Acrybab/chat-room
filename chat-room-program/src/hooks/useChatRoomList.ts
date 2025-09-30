@@ -55,13 +55,13 @@ export const useChatRoomList = () => {
   }, [data]);
 
   useEffect(() => {
-    socket.on("userStatusChanged", (data) => {
+    socket?.on("userStatusChanged", (data) => {
       setIsUserOnline(data.isOnline);
       console.log("User status changed:", data);
     });
 
     return () => {
-      socket.off("userStatusChanged");
+      socket?.off("userStatusChanged");
     };
   }, []);
 
