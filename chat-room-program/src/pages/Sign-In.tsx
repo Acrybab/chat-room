@@ -285,6 +285,10 @@ export const SignIn = () => {
               </button>
 
               <button
+                onClick={() => {
+                  window.location.href =
+                    "https://chat-room-be-production.up.railway.app/auth/github";
+                }}
                 type="button"
                 className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors"
               >
