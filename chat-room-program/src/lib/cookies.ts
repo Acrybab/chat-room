@@ -16,13 +16,13 @@ export const removeCookie = (name: string) => {
 };
 
 export const getToken = () => {
-  return getCookie("chat_room_token");
+  return localStorage.getItem("chat_room_token");
 };
 
 export const setToken = (token: string) => {
-  setCookie("chat_room_token", token);
+  localStorage.setItem("chat_room_token", token);
 };
 
 export const removeToken = () => {
-  removeCookie("chat_room_token");
+  localStorage.removeItem("chat_room_token");
 };
