@@ -96,9 +96,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await axios.get(
       "https://chat-room-be-production.up.railway.app/auth/profile",
       {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
         withCredentials: true,
       }
     );
