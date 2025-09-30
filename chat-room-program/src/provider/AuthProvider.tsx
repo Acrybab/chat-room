@@ -1,4 +1,5 @@
 import { AuthContext } from "@/auth/AuthContext";
+import { getToken } from "@/lib/cookies";
 import type { MeResponse } from "@/types/chatRoom.types";
 import type { User } from "@/types/user.types";
 import { useQuery } from "@tanstack/react-query";
@@ -92,13 +93,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const getMeFunction = async () => {
+    const token = getToken(); // ✅ Lấy từ localStorage
     const response = await axios.get(
       "https://chat-room-be-production.up.railway.app/auth/profile",
       {
-        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Dùng lại header
+        },
       }
     );
-
     return response.data;
   };
 
@@ -106,6 +109,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     queryKey: ["getMe"],
     queryFn: getMeFunction,
   });
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+
+    if (token) {
+      // Lưu token vào localStorage
+      localStorage.setItem("chat_room_token", token);
+
+      // Xóa token khỏi URL (để URL sạch)
+      window.history.replaceState({}, "", window.location.pathname);
+
+      // Refetch user info
+      refetch();
+    }
+  }, [refetch]);
 
   useEffect(() => {
     if (data) {
