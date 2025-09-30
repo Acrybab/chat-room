@@ -26,6 +26,19 @@ export interface MessageRealTime {
   };
   readBy?: number[]; // 🆕 thêm read receipt
 }
+export interface ChatRoomDetail {
+  id: number;
+  name: string;
+  isPrivate: boolean;
+  category: string;
+  description: string;
+}
+export interface ChatRoomDetailResponse {
+  data: {
+    message: string;
+    chatRoom: ChatRoomDetail;
+  };
+}
 
 export const useChatRoom = ({
   roomId,
@@ -38,6 +51,22 @@ export const useChatRoom = ({
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
   let typingTimeout: NodeJS.Timeout;
+
+  const getRoomById = async (roomId: string) => {
+    const response = await axios.get(
+      `https://chat-room-be-production.up.railway.app/chat-rooms/${roomId}`,
+      {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }
+    );
+    return response.data;
+  };
+
+  const { data: roomDetail } = useQuery<ChatRoomDetailResponse>({
+    queryKey: ["room", roomId],
+    queryFn: () => getRoomById(roomId as string),
+    enabled: !!roomId,
+  });
 
   // Get current user
   const getMeFunction = async () => {
@@ -186,14 +215,14 @@ export const useChatRoom = ({
 
     socket.emit("typing", {
       roomId: Number(roomId),
-      userId: userData.data.user.id,
+      userId: Number(userData.data.user.id),
     });
 
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
       socket.emit("stopTyping", {
         roomId: Number(roomId),
-        userId: userData.data.user.id,
+        userId: Number(userData.data.user.id),
       });
     }, 2000);
   };
@@ -201,13 +230,13 @@ export const useChatRoom = ({
   useEffect(() => {
     if (!isConnected) return;
 
-    socket.on("userTyping", ({ userId }) => {
+    socket.on("typing", ({ userId }) => {
       if (userId !== userData?.data.user.id) {
         setTypingUsers((prev) => [...new Set([...prev, userId])]);
       }
     });
 
-    socket.on("userStopTyping", ({ userId }) => {
+    socket.on("stopTyping", ({ userId }) => {
       setTypingUsers((prev) => prev.filter((id) => id !== userId));
     });
 
@@ -222,8 +251,8 @@ export const useChatRoom = ({
     });
 
     return () => {
-      socket.off("userTyping");
-      socket.off("userStopTyping");
+      socket.off("typing");
+      socket.off("stopTyping");
       socket.off("messageRead");
     };
   }, [isConnected, userData?.data.user.id]);
@@ -291,6 +320,7 @@ export const useChatRoom = ({
     userData,
     messages,
     isConnected,
+    roomDetail,
     typingUsers, // 🆕 để hiển thị "typing..."
     isTyping: typingUsers.length > 0, // 🆕 có ai đang gõ không
   };

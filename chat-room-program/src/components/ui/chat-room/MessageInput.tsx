@@ -6,12 +6,14 @@ import {
   TooltipTrigger,
 } from "../tooltip";
 import { Button } from "../button";
-import { Paperclip, Send, Smile } from "lucide-react";
+import { Paperclip, Send, SmileIcon } from "lucide-react";
 import { Textarea } from "../textarea";
 import type { MeResponse } from "@/types/chatRoom.types";
 import { socket } from "./socket";
 import type { OnlineUser } from "@/store/room.store";
-
+import EmojiPicker from "emoji-picker-react";
+import { Theme } from "emoji-picker-react";
+import { SkinTones } from "emoji-picker-react";
 interface MessageInputProps {
   message: string;
   setMessage: (message: string) => void;
@@ -22,11 +24,11 @@ interface MessageInputProps {
     shiftKey: boolean;
     preventDefault: () => void;
   }) => void;
-  getRoomName: () => string;
   roomId: string | undefined;
   userData: MeResponse | undefined;
   handleTyping: () => void;
   onlineUsers: OnlineUser[];
+  roomName: string | undefined;
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -35,11 +37,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   inputRef,
   handleSendMessage,
   handleKeyPress,
-  getRoomName,
   roomId,
   userData,
   handleTyping,
   onlineUsers,
+  roomName,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,9 +49,36 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [query, setQuery] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
   const [cursorPos, setCursorPos] = useState<number | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [skinTone, setSkinTone] = useState(SkinTones.NEUTRAL);
+  const escapeRegExp = (string: string) =>
+    string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   // demo participants, sau này bạn truyền từ props hoặc context
-
+  const handleOpenEmoji = () => {
+    setShowEmojiPicker(!showEmojiPicker);
+  };
+  const handleEmojiClick = (emojiData: { emoji: string }) => {
+    const emoji = emojiData.emoji;
+    if (inputRef.current) {
+      const start = inputRef.current.selectionStart;
+      const end = inputRef.current.selectionEnd;
+      const newMessage =
+        message.substring(0, start) + emoji + message.substring(end);
+      setMessage(newMessage);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.setSelectionRange(
+          start + emoji.length,
+          start + emoji.length
+        );
+      }, 0);
+    }
+    setShowEmojiPicker(false);
+  };
+  const handleChangeSkinTone = (tone: SkinTones) => {
+    setSkinTone(tone);
+  };
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
   };
@@ -62,7 +91,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       reader.onerror = (error) => reject(error);
     });
   };
-
+  const emojiMap: Record<string, string> = {
+    ":))": "😆",
+    ":)": "🙂",
+    ":(": "🙁",
+    "<3": "❤️",
+    ":D": "😃",
+  };
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && socket && userData) {
@@ -132,10 +167,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 ref={inputRef}
                 value={message}
                 onChange={(e) => {
-                  setMessage(e.target.value);
+                  let value = e.target.value;
+
+                  // duyệt tất cả các pattern trong emojiMap
+                  Object.entries(emojiMap).forEach(([pattern, emoji]) => {
+                    const regex = new RegExp(escapeRegExp(pattern), "g");
+                    value = value.replace(regex, emoji);
+                  });
+
+                  setMessage(value);
                   handleTyping();
 
-                  const value = e.target.value;
+                  // mention detect
                   const match = value
                     .slice(0, e.target.selectionStart)
                     .match(/@(\w*)$/);
@@ -148,9 +191,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   }
                 }}
                 onKeyPress={handleKeyPress}
-                placeholder={`Message ${getRoomName()}...`}
+                placeholder={`Message ${roomName}...`}
                 className="flex-1 min-h-[44px] max-h-32 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 px-4 py-3 text-sm placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                rows={1}
               />
 
               {/* Emoji button */}
@@ -161,8 +203,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-2"
+                      onClick={() => handleOpenEmoji()}
                     >
-                      <Smile className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      <SmileIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
@@ -171,7 +214,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 </Tooltip>
               </TooltipProvider>
             </div>
-
+            {showEmojiPicker && (
+              <div className="absolute bottom-16">
+                <EmojiPicker
+                  allowExpandReactions
+                  onEmojiClick={handleEmojiClick}
+                  onSkinToneChange={(skinTone) => {
+                    handleChangeSkinTone(skinTone);
+                  }}
+                  defaultSkinTone={skinTone}
+                  customEmojis={[]}
+                  theme={"auto" as Theme}
+                />
+              </div>
+            )}
             {/* Mention dropdown */}
             {showMentionList && (
               <div className="absolute bottom-14 left-3 w-fit bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50">

@@ -52,7 +52,6 @@ export const Room = () => {
     inputRef,
     handleSendMessage,
     handleKeyPress,
-    getRoomName,
     getStatusColor,
     formatTimestamp,
     getInitials,
@@ -60,6 +59,7 @@ export const Room = () => {
     messages,
     handleTyping,
     isTyping,
+    roomDetail,
   } = useChatRoom({
     message,
     setMessage,
@@ -110,7 +110,7 @@ export const Room = () => {
   const navigateBack = () => {
     window.history.back();
   };
-
+  const roomName = roomDetail?.data.chatRoom.name;
   const handleCloseModal = () => {
     socket.emit("endCall", {
       roomId: isCommingCall.roomId,
@@ -143,7 +143,7 @@ export const Room = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{getRoomName()}</CardTitle>
+                    <CardTitle className="text-lg">{roomName}</CardTitle>
                     <CardDescription className="text-sm">
                       {onlineUsers?.filter((u) => u.isOnline).length} members
                       online
@@ -181,7 +181,7 @@ export const Room = () => {
           inputRef={inputRef}
           handleSendMessage={handleSendMessage}
           handleKeyPress={handleKeyPress}
-          getRoomName={getRoomName}
+          roomName={roomName}
         />
       </div>
 
