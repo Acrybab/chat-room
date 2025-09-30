@@ -74,6 +74,7 @@ export const useChatRoom = ({
       "https://chat-room-be-production.up.railway.app/auth/profile",
       {
         headers: { Authorization: `Bearer ${getToken()}` },
+        withCredentials: true,
       }
     );
     return response.data;
