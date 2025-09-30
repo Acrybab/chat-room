@@ -99,6 +99,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
+        withCredentials: true,
       }
     );
 
