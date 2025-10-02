@@ -309,7 +309,7 @@ export const SignIn = () => {
               <button
                 type="button"
                 className="font-medium text-gray-900 hover:text-gray-700"
-                onClick={() => navigate("/signup")}
+                onClick={() => navigate("/sign-up")}
               >
                 Sign up here
               </button>
