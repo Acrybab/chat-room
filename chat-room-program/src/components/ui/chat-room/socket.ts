@@ -1,4 +1,5 @@
 // socket.ts
+import { getToken } from "@/lib/cookies";
 import { io, Socket } from "socket.io-client";
 class SocketManager {
   private static instance: SocketManager;
@@ -13,7 +14,43 @@ class SocketManager {
     }
     return SocketManager.instance;
   }
+  SOCKET_URL = "https://chat-room-be-production.up.railway.app";
+  getUserId = async () => {
+    try {
+      const token = getToken();
+      const response = await fetch(
+        "https://chat-room-be-production.up.railway.app/auth/profile",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
+      return data?.data?.user?.id;
+    } catch (error) {
+      console.error("Failed to get userId:", error);
+      return null;
+    }
+  };
+  initializeSocket = async () => {
+    const userId = await this.getUserId();
 
+    if (!userId) {
+      console.error("Cannot initialize socket: userId not found");
+      return null;
+    }
+
+    const socket = io(this.SOCKET_URL, {
+      auth: { userId }, // 👈 Quan trọng!
+      transports: ["websocket", "polling"],
+      reconnection: true,
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected with userId:", userId);
+    });
+
+    return socket;
+  };
   setUserId(userId: number) {
     console.log("🆔 Setting userId:", userId, "Previous:", this.userId);
     this.userId = userId;
@@ -125,4 +162,8 @@ class SocketManager {
 }
 
 export const socketManager = SocketManager.getInstance();
-export const socket = socketManager.getSocket();
+export let socket = socketManager.getSocket();
+export const setupSocket = async () => {
+  socket = (await socketManager.initializeSocket())!;
+  return socket;
+};

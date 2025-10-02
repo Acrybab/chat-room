@@ -34,34 +34,29 @@ export const ChatRoomList = ({
   const { meData, rooms, setRooms, isLoading } = useChatRoomList();
 
   useEffect(() => {
-    if (!socket) {
-      console.warn("⚠️ Socket not available in ChatRoomList");
+    if (!socket || !socket.connected) {
+      console.warn("⚠️ Socket not connected");
       return;
     }
 
-    console.log("🎧 [ChatRoomList] Setting up addedToRoom listener");
-    console.log("🔌 Socket state:", {
-      connected: socket.connected,
-      id: socket.id,
-    });
-
     const handleAddedToRoom = (payload: { room: Room }) => {
-      console.log("🎉 [ChatRoomList] You were added to room:", payload.room);
+      console.log("🎉 Added to room:", payload.room);
 
-      if (payload.room) {
-        setRooms([...rooms, payload.room]);
-        console.log("✅ [ChatRoomList] Room added to list");
-      }
+      setRooms(((prevRooms: Room[]) => {
+        // Tránh duplicate
+        if (prevRooms.find((r: { id: number }) => r.id === payload.room.id)) {
+          return prevRooms;
+        }
+        return [...prevRooms, payload.room];
+      }) as unknown as Room[]);
     };
 
     socket.on("addedToRoom", handleAddedToRoom);
-    console.log("✅ [ChatRoomList] Listener registered");
 
     return () => {
-      console.log("🧹 [ChatRoomList] Cleaning up listener");
       socket.off("addedToRoom", handleAddedToRoom);
     };
-  }, [rooms, setRooms]); // ✅ Add dependencies
+  }, [setRooms]); // ✅ Chỉ cần setRooms, không cần rooms
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
