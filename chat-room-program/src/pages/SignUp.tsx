@@ -6,6 +6,7 @@ import { useSignUpStore } from "@/store/signUp.store";
 import { SignUpForm } from "@/features/sign-up/SignUpForm";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useNavigate } from "react-router-dom";
 export interface SignUpFormValues {
   email: string;
   password: string;
@@ -49,6 +50,7 @@ export const SignUp = () => {
     setShowConfirmPassword,
   } = useSignUpStore();
 
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -76,7 +78,11 @@ export const SignUp = () => {
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Button variant="link" className="p-0 h-auto font-medium">
+            <Button
+              onClick={() => navigate("/sign-in")}
+              variant="link"
+              className="p-0 h-auto font-medium"
+            >
               Sign in here
             </Button>
           </p>

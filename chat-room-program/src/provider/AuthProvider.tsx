@@ -1,4 +1,5 @@
 import { AuthContext } from "@/auth/AuthContext";
+import { socketManager } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import type { MeResponse } from "@/types/chatRoom.types";
 import type { User } from "@/types/user.types";
@@ -109,28 +110,99 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     queryKey: ["getMe"],
     queryFn: getMeFunction,
   });
+
   useEffect(() => {
+    console.log("🔍 Checking URL for OAuth token...");
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token");
 
     if (token) {
-      // Lưu token vào localStorage
-      localStorage.setItem("chat_room_token", token);
+      console.log("🎫 Token found in URL:", token.substring(0, 20) + "...");
 
-      // Xóa token khỏi URL (để URL sạch)
+      try {
+        // Decode token để lấy userId
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        console.log("📦 Decoded token payload:", payload);
+
+        const userId = payload.sub || payload.userId || payload.id;
+        console.log("👤 Extracted userId:", userId);
+
+        if (userId) {
+          // Lưu token và userId
+          localStorage.setItem("chat_room_token", token);
+          localStorage.setItem("userId", userId.toString());
+
+          console.log("💾 Saved to localStorage:", {
+            userId,
+            hasToken: !!token,
+          });
+
+          // ✅ Reconnect socket với userId ngay lập tức
+          console.log("🔌 Reconnecting socket with userId:", userId);
+          socketManager.reconnectWithUser(userId);
+        } else {
+          console.error("❌ No userId found in token payload!");
+        }
+      } catch (error) {
+        console.error("❌ Error decoding token:", error);
+      }
+
+      // Xóa token khỏi URL
       window.history.replaceState({}, "", window.location.pathname);
 
       // Refetch user info
       refetch();
+    } else {
+      console.log("ℹ️ No token in URL");
+
+      // ✅ Nếu đã có user trong localStorage, reconnect socket
+      const storedUserId = localStorage.getItem("userId");
+      const storedUser = localStorage.getItem("user");
+
+      if (storedUserId && storedUser) {
+        console.log(
+          "💾 Found stored user, reconnecting socket with userId:",
+          storedUserId
+        );
+        socketManager.reconnectWithUser(Number(storedUserId));
+      }
     }
   }, [refetch]);
 
+  // ✅ Effect khi user data được load
   useEffect(() => {
-    if (data) {
+    if (data?.data?.user) {
+      console.log("✅ User data loaded:", data.data.user);
+
       setLoggedInUser(data.data.user);
       localStorage.setItem("user", JSON.stringify(data.data.user));
+
+      const userId = data.data.user.id;
+      localStorage.setItem("userId", userId.toString());
+
+      // ✅ Đảm bảo socket connected với userId
+      console.log("🔌 Ensuring socket connection with userId:", userId);
+      socketManager.reconnectWithUser(userId);
     }
   }, [data]);
+
+  // ✅ Effect kiểm tra socket state khi component mount
+  useEffect(() => {
+    if (loggedInUser?.id) {
+      console.log("👤 LoggedInUser exists, checking socket connection");
+      const socket = socketManager.getSocket();
+
+      if (!socket.connected) {
+        console.log(
+          "🔌 Socket not connected, connecting with userId:",
+          loggedInUser.id
+        );
+        socketManager.reconnectWithUser(loggedInUser.id);
+      } else {
+        console.log("✅ Socket already connected");
+      }
+    }
+  }, [loggedInUser]);
 
   if (isLoading) {
     return <LoadingSpinner />;

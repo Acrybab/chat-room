@@ -1,6 +1,5 @@
 // socket.ts
 import { io, Socket } from "socket.io-client";
-
 class SocketManager {
   private static instance: SocketManager;
   private socket: Socket | null = null;
@@ -15,56 +14,104 @@ class SocketManager {
     return SocketManager.instance;
   }
 
-  // Thêm method để set userId
   setUserId(userId: number) {
+    console.log("🆔 Setting userId:", userId, "Previous:", this.userId);
     this.userId = userId;
 
-    // Nếu socket đang connected, disconnect và reconnect với userId mới
     if (this.socket?.connected) {
-      console.log("🔄 Reconnecting socket with new userId:", userId);
+      console.log("🔄 Socket already connected, disconnecting...");
       this.socket.disconnect();
       this.socket = null;
     }
   }
 
   getSocket(): Socket {
-    if (!this.socket || !this.socket.connected) {
-      console.log(
-        "🔌 Creating new socket connection with userId:",
-        this.userId
-      );
+    if (!this.socket) {
+      console.log("🔌 Creating NEW socket connection");
+      console.log("📍 URL:", "https://chat-room-be-production.up.railway.app");
+      console.log("👤 UserId:", this.userId);
 
       this.socket = io("https://chat-room-be-production.up.railway.app", {
         transports: ["websocket"],
-        forceNew: false,
+        forceNew: true, // ✅ Force new connection
         reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
         autoConnect: false,
-        timeout: 5 * 60 * 1000,
+        timeout: 10000,
         auth: {
-          userId: this.userId, // ✅ Gửi userId lên socket
+          userId: this.userId,
+        },
+        query: {
+          userId: this.userId, // ✅ Gửi cả query param
         },
       });
 
-      // Debug events
+      // Connection events
       this.socket.on("connect", () => {
-        console.log(
-          "✅ Socket connected:",
-          this.socket?.id,
-          "userId:",
-          this.userId
-        );
+        console.log("✅ Socket CONNECTED:", {
+          socketId: this.socket?.id,
+          userId: this.userId,
+          timestamp: new Date().toISOString(),
+        });
       });
 
-      this.socket.on("disconnect", () => {
-        console.log("❌ Socket disconnected");
+      this.socket.on("disconnect", (reason) => {
+        console.log("❌ Socket DISCONNECTED:", reason);
       });
 
       this.socket.on("connect_error", (error) => {
-        console.error("🚫 Socket connection error:", error);
+        console.error("🚫 Socket connection ERROR:", {
+          message: error.message,
+          userId: this.userId,
+        });
       });
+
+      // Listen for user status changes
+      this.socket.on("userStatusChanged", (data) => {
+        console.log("👥 User status changed:", data);
+      });
+
+      // Override emit to debug
+      const originalEmit = this.socket.emit.bind(this.socket);
+      this.socket.emit = (event: string, ...args: unknown[]) => {
+        console.log(`📤 Emitting:`, {
+          event,
+          args,
+          socketId: this.socket?.id,
+          userId: this.userId,
+        });
+        return originalEmit(event, ...args);
+      };
+
+      // Listen to ALL events for debugging
+      this.socket.onAny((event, ...args) => {
+        console.log(`📥 Received event:`, { event, args });
+      });
+    } else if (!this.socket.connected) {
+      console.log("🔌 Socket exists but not connected, connecting...");
     }
 
     return this.socket;
+  }
+
+  reconnectWithUser(userId: number) {
+    console.log("🔄 reconnectWithUser called with:", userId);
+    this.setUserId(userId);
+    const socket = this.getSocket();
+
+    console.log("🔌 Socket state:", {
+      exists: !!socket,
+      connected: socket?.connected,
+      id: socket?.id,
+    });
+
+    if (!socket.connected) {
+      console.log("🔌 Calling socket.connect()...");
+      socket.connect();
+    } else {
+      console.log("✅ Socket already connected");
+    }
   }
 
   disconnect() {
@@ -73,15 +120,7 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
     }
-  }
-
-  // Method để reconnect với userId mới
-  reconnectWithUser(userId: number) {
-    this.setUserId(userId);
-    const socket = this.getSocket();
-    if (!socket.connected) {
-      socket.connect();
-    }
+    this.userId = null;
   }
 }
 
