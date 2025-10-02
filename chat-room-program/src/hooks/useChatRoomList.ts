@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // useChatRoomList.ts
-import { socket } from "@/components/ui/chat-room/socket";
+import { setupSocket, socket } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import { useRoomStore } from "@/store/room.store";
 import type { ChatRoomListResponse, MeResponse } from "@/types/chatRoom.types";
@@ -49,6 +49,34 @@ export const useChatRoomList = () => {
     queryKey: ["chatRooms"],
     queryFn: getAllChatRoomFunction,
   });
+  useEffect(() => {
+    const initSocket = async () => {
+      // Khởi tạo socket nếu chưa có
+      if (!socket || !socket.connected) {
+        await setupSocket();
+      }
+    };
+
+    initSocket();
+  }, []);
+
+  useEffect(() => {
+    if (!socket) {
+      console.warn("⚠️ Socket not available in useChatRoomList");
+      return;
+    }
+
+    const handleUserStatusChanged = (data: any) => {
+      setIsUserOnline(data.isOnline);
+      console.log("👥 User status changed:", data);
+    };
+
+    socket.on("userStatusChanged", handleUserStatusChanged);
+
+    return () => {
+      socket.off("userStatusChanged", handleUserStatusChanged);
+    };
+  }, []);
 
   useEffect(() => {
     setRooms(data?.data.chatRooms || []);
