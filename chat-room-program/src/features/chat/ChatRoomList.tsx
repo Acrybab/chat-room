@@ -21,6 +21,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 interface ChatRoomListProps {
   getCategoryVariant: (category: string) => "default" | "secondary" | "outline";
@@ -38,25 +39,26 @@ export const ChatRoomList = ({
       console.warn("⚠️ Socket not connected");
       return;
     }
-
     const handleAddedToRoom = (payload: { room: Room }) => {
       console.log("🎉 Added to room:", payload.room);
 
-      setRooms(((prevRooms: Room[]) => {
-        // Tránh duplicate
-        if (prevRooms.find((r: { id: number }) => r.id === payload.room.id)) {
-          return prevRooms;
-        }
-        return [...prevRooms, payload.room];
-      }) as unknown as Room[]);
-    };
+      const isDuplicate = rooms.some((r) => r.id === payload.room.id);
+      if (isDuplicate) return;
 
+      // ✅ Hiển thị notification
+      toast.success(`You were added to ${payload.room.name}`, {
+        description: payload.room.description,
+        duration: 5000,
+      });
+
+      setRooms([...rooms, payload.room]);
+    };
     socket.on("addedToRoom", handleAddedToRoom);
 
     return () => {
       socket.off("addedToRoom", handleAddedToRoom);
     };
-  }, [setRooms]); // ✅ Chỉ cần setRooms, không cần rooms
+  }, [setRooms, rooms]); // ✅ Chỉ cần setRooms, không cần rooms
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
