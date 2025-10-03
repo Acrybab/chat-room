@@ -116,19 +116,6 @@ export const useHomePage = () => {
     return variants[category as Category] || "default";
   };
 
-  const getAllOnlineUser = async () => {
-    const response = await axios.get(
-      "https://chat-room-be-production.up.railway.app/users"
-    );
-    console.log(response.data);
-    return response.data;
-  };
-
-  const { data } = useQuery({
-    queryKey: ["allOnlineUsers"],
-    queryFn: getAllOnlineUser,
-  });
-
   return {
     handleJoinRoom,
     handleCreateRoom,
@@ -141,6 +128,5 @@ export const useHomePage = () => {
     setIsOpenDialog,
     setRoomCategory,
     roomCategory,
-    data,
   };
 };
