@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "../tooltip";
 import { Button } from "../button";
-import { Paperclip, Send, SmileIcon } from "lucide-react";
+import { Paperclip, Send, SmileIcon, Loader2 } from "lucide-react";
 import { Textarea } from "../textarea";
 import type { MeResponse } from "@/types/chatRoom.types";
 import { socket } from "./socket";
@@ -14,6 +14,7 @@ import type { OnlineUser } from "@/store/room.store";
 import EmojiPicker from "emoji-picker-react";
 import { Theme } from "emoji-picker-react";
 import { SkinTones } from "emoji-picker-react";
+
 interface MessageInputProps {
   message: string;
   setMessage: (message: string) => void;
@@ -45,19 +46,25 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Upload states
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   // mention states
   const [query, setQuery] = useState("");
   const [showMentionList, setShowMentionList] = useState(false);
   const [cursorPos, setCursorPos] = useState<number | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [skinTone, setSkinTone] = useState(SkinTones.NEUTRAL);
+
   const escapeRegExp = (string: string) =>
     string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-  // demo participants, sau này bạn truyền từ props hoặc context
   const handleOpenEmoji = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
+
   const handleEmojiClick = (emojiData: { emoji: string }) => {
     const emoji = emojiData.emoji;
     if (inputRef.current) {
@@ -76,21 +83,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
     setShowEmojiPicker(false);
   };
+
   const handleChangeSkinTone = (tone: SkinTones) => {
     setSkinTone(tone);
   };
+
   const handleFileButtonClick = () => {
     fileInputRef.current?.click();
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
   const emojiMap: Record<string, string> = {
     ":))": "😆",
     ":)": "🙂",
@@ -98,37 +99,115 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     "<3": "❤️",
     ":D": "😃",
   };
+
+  // Xử lý khi chọn file - TỰ ĐỘNG UPLOAD LUÔN (giống Zalo)
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && socket && userData) {
-      const maxSize = 10 * 1024 * 1024;
-      if (file.size > maxSize) {
-        alert("File quá lớn! Vui lòng chọn file nhỏ hơn 10MB.");
-        e.target.value = "";
-        return;
+    if (!file || !socket || !userData || !roomId) {
+      e.target.value = "";
+      return;
+    }
+
+    // Validate file size (10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("File quá lớn! Vui lòng chọn file nhỏ hơn 10MB.");
+      e.target.value = "";
+      return;
+    }
+
+    // Set file info và bắt đầu upload
+    setUploadingFile(file);
+    setIsUploading(true);
+
+    // Tạo preview cho hình ảnh
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+
+    try {
+      // 1. Upload file lên server
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/messages/${roomId}/upload`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
       }
 
-      try {
-        const base64Data = await fileToBase64(file);
-        socket.emit("uploadFile", {
-          roomId: parseInt(roomId!),
-          userId: userData.data.user.id,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          fileData: base64Data,
-        });
-      } catch (error) {
-        console.error("Error processing file:", error);
-        alert("Có lỗi xảy ra khi xử lý file!");
-      }
+      const fileUrl = await response.text();
+
+      // 2. Gửi file message qua socket
+      socket.emit("sendFileMessage", {
+        roomId: Number(roomId),
+        userId: userData.data.user.id,
+        fileUrl: fileUrl,
+        fileName: file.name,
+        fileType: file.type,
+      });
+
+      console.log("✅ File uploaded and sent successfully");
+    } catch (error) {
+      console.error("❌ Error uploading file:", error);
+      alert("Không thể upload file. Vui lòng thử lại!");
+    } finally {
+      // Reset tất cả states
+      setUploadingFile(null);
+      setFilePreview(null);
+      setIsUploading(false);
+      e.target.value = "";
     }
-    e.target.value = "";
   };
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
       <div className="max-w-4xl mx-auto p-4">
+        {/* Upload Progress Indicator - Hiện khi đang upload */}
+        {isUploading && uploadingFile && (
+          <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              {filePreview ? (
+                <img
+                  src={filePreview}
+                  alt="Preview"
+                  className="w-12 h-12 object-cover rounded"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-300 dark:bg-gray-700 rounded flex items-center justify-center">
+                  <Paperclip className="h-5 w-5 text-gray-500" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {uploadingFile.name}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Đang gửi...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-end gap-3">
           {/* File attachment button */}
           <TooltipProvider>
@@ -140,6 +219,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   onClick={handleFileButtonClick}
                   type="button"
+                  disabled={isUploading}
                 >
                   <Paperclip className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 </Button>
@@ -169,7 +249,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 onChange={(e) => {
                   let value = e.target.value;
 
-                  // duyệt tất cả các pattern trong emojiMap
                   Object.entries(emojiMap).forEach(([pattern, emoji]) => {
                     const regex = new RegExp(escapeRegExp(pattern), "g");
                     value = value.replace(regex, emoji);
@@ -178,7 +257,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   setMessage(value);
                   handleTyping();
 
-                  // mention detect
                   const match = value
                     .slice(0, e.target.selectionStart)
                     .match(/@(\w*)$/);
@@ -193,6 +271,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 onKeyPress={handleKeyPress}
                 placeholder={`Message ${roomName}...`}
                 className="flex-1 min-h-[44px] max-h-32 resize-none border-0 bg-transparent focus:ring-0 focus-visible:ring-0 px-4 py-3 text-sm placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                disabled={isUploading}
               />
 
               {/* Emoji button */}
@@ -204,6 +283,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                       size="icon"
                       className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-2"
                       onClick={() => handleOpenEmoji()}
+                      disabled={isUploading}
                     >
                       <SmileIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
@@ -214,8 +294,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 </Tooltip>
               </TooltipProvider>
             </div>
+
             {showEmojiPicker && (
-              <div className="absolute bottom-16">
+              <div className="absolute bottom-16 left-0 z-50">
                 <EmojiPicker
                   allowExpandReactions
                   onEmojiClick={handleEmojiClick}
@@ -228,6 +309,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 />
               </div>
             )}
+
             {/* Mention dropdown */}
             {showMentionList && (
               <div className="absolute bottom-14 left-3 w-fit bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50">
@@ -242,13 +324,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                         if (cursorPos !== null) {
                           const before = message.slice(
                             0,
-                            cursorPos - query.length - 1 // trừ đi cả dấu @ gốc
+                            cursorPos - query.length - 1
                           );
                           const after = message.slice(cursorPos);
-
-                          // chỉ thêm email, KHÔNG thêm @ nữa
                           const newMsg = `${before}@${u.email} ${after}`;
-
                           setMessage(newMsg);
                           setShowMentionList(false);
                         }
@@ -265,10 +344,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           {/* Send button */}
           <Button
             onClick={handleSendMessage}
-            disabled={!message.trim()}
+            disabled={!message.trim() || isUploading}
             size="icon"
             className={`h-9 w-9 shrink-0 rounded-full transition-all ${
-              message.trim()
+              message.trim() && !isUploading
                 ? "bg-black text-white shadow-sm"
                 : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
             }`}
