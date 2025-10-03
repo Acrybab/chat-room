@@ -87,8 +87,14 @@ export const MessageArea = ({
 
     const fileType = msg.fileType || "";
     const fileName = msg.fileName || msg.fileUrl.split("/").pop() || "file";
-
+    // const getClient: SupabaseClient;
     // IMAGE - Hiển thị như Zalo
+    console.log("Rendering file message:", {
+      fileType,
+      fileName,
+      fileUrl: msg.fileUrl,
+    });
+
     if (fileType.startsWith("image/")) {
       return (
         <div className="mt-1">
@@ -174,7 +180,6 @@ export const MessageArea = ({
           const isOwn = msg.user.id === userId;
           const prevMsg = index > 0 ? messages[index - 1] : undefined;
           const showHeader = shouldShowHeader(msg, prevMsg);
-
           return (
             <div
               key={index}
