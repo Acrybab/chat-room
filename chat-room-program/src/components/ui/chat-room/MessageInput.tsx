@@ -152,9 +152,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         throw new Error("Upload failed");
       }
 
-      const fileUrl = await response.text();
+      const data = await response.json();
 
-      // 2. Gửi file message qua socket
+      if (!data.success) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      const fileUrl = data.fileUrl;
+
+      // Gửi socket như cũ
       socket.emit("sendFileMessage", {
         roomId: Number(roomId),
         userId: userData.data.user.id,
