@@ -3,7 +3,7 @@ import { chatRooms } from "@/data/dummyChatRooms";
 import { Card, CardContent } from "../card";
 
 interface StatsCardsProps {
-  onlineUsers: any;
+  onlineUsers: number | undefined;
 }
 
 export const StatsCards = ({ onlineUsers }: StatsCardsProps) => {
