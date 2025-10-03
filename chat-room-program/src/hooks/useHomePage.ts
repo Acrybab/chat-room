@@ -129,8 +129,6 @@ export const useHomePage = () => {
     queryFn: getAllOnlineUser,
   });
 
-  console.log("All online users:", data);
-
   return {
     handleJoinRoom,
     handleCreateRoom,

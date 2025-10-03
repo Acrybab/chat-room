@@ -2,20 +2,14 @@ import { Hash, MessageCircle, Users, Zap } from "lucide-react";
 import { chatRooms } from "@/data/dummyChatRooms";
 import { Card, CardContent } from "../card";
 
-interface StatsCardsProps {
-  onlineUsers: number | undefined;
-}
-
-export const StatsCards = ({ onlineUsers }: StatsCardsProps) => {
+export const StatsCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <Card>
         <CardContent className="flex flex-col items-center justify-center p-6">
           <div className="flex items-center space-x-2 mb-2">
             <Users className="w-5 h-5 text-blue-500" />
-            <span className="text-2xl font-bold text-blue-500">
-              {onlineUsers}
-            </span>
+            <span className="text-2xl font-bold text-blue-500">{2}</span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
             Active Users
