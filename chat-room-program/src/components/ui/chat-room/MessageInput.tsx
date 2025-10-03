@@ -14,6 +14,7 @@ import type { OnlineUser } from "@/store/room.store";
 import EmojiPicker from "emoji-picker-react";
 import { Theme } from "emoji-picker-react";
 import { SkinTones } from "emoji-picker-react";
+import { getToken } from "@/lib/cookies";
 
 interface MessageInputProps {
   message: string;
@@ -137,11 +138,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       formData.append("file", file);
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/messages/${roomId}/upload`,
+        `https://chat-room-be-production.up.railway.app/messages/${roomId}/upload`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${getToken()}`,
           },
           body: formData,
         }
