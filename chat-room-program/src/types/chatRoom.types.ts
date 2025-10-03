@@ -55,6 +55,8 @@ export interface Message {
   isOwn: boolean;
   content: string;
   createdAt: string;
+  type: "text" | "file";
+
   updatedAt: string;
   userId: number;
   roomId: number;

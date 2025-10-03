@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 export type Message = {
   userId: number;
+  type: "text" | "file";
+
   content: string;
   roomId: number;
   isOwn: boolean;

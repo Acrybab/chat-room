@@ -13,18 +13,21 @@ interface UseChatRoomProps {
 
 export interface MessageRealTime {
   id: number;
-  isOwn: boolean;
-  content: string;
+  type: "text" | "file";
+  content?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
   createdAt: string;
+  isOwn?: boolean;
   user: {
     id: number;
     email: string;
   };
-  fileUrl?: string;
   chatRoom: {
     id: number;
   };
-  readBy?: number[]; // 🆕 thêm read receipt
+  readBy?: number[];
 }
 export interface ChatRoomDetail {
   id: number;
@@ -107,9 +110,10 @@ export const useChatRoom = ({
     if (messagesData?.data.messages && userData?.data.user.id) {
       const messagesWithOwnership = messagesData.data.messages.map((msg) => ({
         ...msg,
+        type: msg.type ?? "text", // Ensure type is present, fallback to "text" if missing
         isOwn: msg.user.id === userData.data.user.id,
       }));
-      setMessages(messagesWithOwnership);
+      setMessages(messagesWithOwnership as MessageRealTime[]);
     }
   }, [messagesData, userData?.data.user.id]);
 

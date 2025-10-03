@@ -2,7 +2,7 @@ import React, { type JSX } from "react";
 import { ScrollArea } from "../scroll-area";
 import { Avatar, AvatarFallback } from "../avatar";
 import { Label } from "../label";
-import { CheckCheck } from "lucide-react";
+import { CheckCheck, Download, FileText } from "lucide-react";
 
 import type { MessageRealTime } from "@/hooks/useChatRoom";
 
@@ -25,8 +25,6 @@ export const MessageArea = ({
   messages,
   getInitials,
 }: MessageAreaProps) => {
-  console.log(currentUserEmail, "current user email");
-
   const shouldShowHeader = (
     current: MessageRealTime,
     prev?: MessageRealTime
@@ -37,10 +35,9 @@ export const MessageArea = ({
       new Date(current.createdAt).getTime() -
       new Date(prev.createdAt).getTime();
 
-    // Nếu khác user hoặc cách nhau > 5 phút thì hiện header
     return !sameUser || timeDiff > 5 * 60 * 1000;
   };
-  // helper: highlight @mention
+
   const highlightMentions = (
     text: string,
     isOwn: boolean,
@@ -58,14 +55,16 @@ export const MessageArea = ({
 
       const mentionedEmail = match[1];
       const isMe = currentUserEmail && mentionedEmail === currentUserEmail;
-      console.log(isMe, "is me");
+
       parts.push(
         <span
           key={match.index}
           className={
             isOwn
-              ? "font-bold text-white" // khi mình là người gửi -> highlight trắng đậm
-              : "text-blue-600 font-bold" // khi người khác gửi -> xanh đậm
+              ? "font-bold text-white"
+              : isMe
+              ? "bg-blue-100 dark:bg-blue-900 px-1 rounded text-blue-600 font-bold"
+              : "text-blue-600 font-bold"
           }
         >
           @{mentionedEmail}
@@ -80,6 +79,92 @@ export const MessageArea = ({
     }
 
     return parts;
+  };
+  console.log(currentUserEmail);
+  // Render file message content
+  const renderFileContent = (msg: MessageRealTime, isOwn: boolean) => {
+    if (!msg.fileUrl) return null;
+
+    const fileType = msg.fileType || "";
+    const fileName = msg.fileName || msg.fileUrl.split("/").pop() || "file";
+
+    // IMAGE - Hiển thị như Zalo
+    if (fileType.startsWith("image/")) {
+      return (
+        <div className="mt-1">
+          <img
+            src={msg.fileUrl}
+            alt={fileName}
+            className="max-w-[300px] max-h-[400px] rounded-lg cursor-pointer hover:opacity-95 transition-opacity object-cover"
+            onClick={() => window.open(msg.fileUrl, "_blank")}
+          />
+        </div>
+      );
+    }
+
+    // VIDEO
+    if (fileType.startsWith("video/")) {
+      return (
+        <div className="mt-1">
+          <video
+            src={msg.fileUrl}
+            controls
+            className="max-w-[300px] max-h-[400px] rounded-lg"
+          >
+            Your browser does not support video.
+          </video>
+        </div>
+      );
+    }
+
+    // OTHER FILES - Card giống Zalo
+    return (
+      <div className="mt-1">
+        <a
+          href={msg.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-3 p-3 rounded-lg min-w-[200px] max-w-[300px] transition-colors ${
+            isOwn
+              ? "bg-white/10 hover:bg-white/20"
+              : "bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600"
+          }`}
+        >
+          <div
+            className={`p-2 rounded ${
+              isOwn ? "bg-white/20" : "bg-gray-100 dark:bg-gray-600"
+            }`}
+          >
+            <FileText
+              className={`h-5 w-5 ${
+                isOwn ? "text-white" : "text-gray-600 dark:text-gray-300"
+              }`}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-sm font-medium truncate ${
+                isOwn ? "text-white" : "text-gray-900 dark:text-gray-100"
+              }`}
+            >
+              {fileName}
+            </p>
+            <p
+              className={`text-xs ${
+                isOwn ? "text-white/70" : "text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              {fileType.split("/")[1]?.toUpperCase() || "FILE"}
+            </p>
+          </div>
+          <Download
+            className={`h-4 w-4 flex-shrink-0 ${
+              isOwn ? "text-white/70" : "text-gray-400"
+            }`}
+          />
+        </a>
+      </div>
+    );
   };
 
   return (
@@ -131,55 +216,32 @@ export const MessageArea = ({
 
                 {/* Bong bóng tin nhắn */}
                 <div
-                  className={`relative px-4 py-2 rounded-2xl max-w-full break-words transition-all duration-200 group-hover:shadow-sm ${
+                  className={`relative rounded-2xl max-w-full break-words transition-all duration-200 group-hover:shadow-sm ${
+                    msg.type === "file" && msg.fileType?.startsWith("image/")
+                      ? "" // Không có padding cho ảnh
+                      : "px-4 py-2" // Có padding cho text và file khác
+                  } ${
                     isOwn
                       ? "bg-black text-white rounded-br-md shadow-sm"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md"
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap font-normal">
-                    {highlightMentions(
-                      msg.content,
-                      isOwn,
-                      userId
-                        ? messages.find((m) => m.user.id === userId)?.user.email
-                        : undefined
-                    )}
-                  </p>
-
-                  {msg.fileUrl && (
-                    <div className="mt-2">
-                      {msg.fileUrl.match(/\.(jpg|jpeg|png|gif)$/i) && (
-                        <img
-                          src={`http://localhost:3000/messages/photo/${msg.fileUrl}`}
-                          alt="img"
-                          className="max-w-sm rounded-lg shadow-sm"
-                        />
+                  {/* TEXT MESSAGE */}
+                  {msg.type === "text" && msg.content && (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap font-normal">
+                      {highlightMentions(
+                        msg.content,
+                        isOwn,
+                        userId
+                          ? messages.find((m) => m.user.id === userId)?.user
+                              .email
+                          : undefined
                       )}
-
-                      {msg.fileUrl.match(/\.(mp4|webm|ogg)$/i) && (
-                        <video
-                          src={msg.fileUrl}
-                          controls
-                          className="max-w-sm rounded-lg shadow-sm"
-                        />
-                      )}
-
-                      {msg.fileUrl.match(/\.(pdf|docx?|xlsx?|zip|mp3)$/i) && (
-                        <a
-                          href={msg.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-sm"
-                        >
-                          <span className="text-base">📎</span>
-                          <span className="truncate max-w-[200px]">
-                            {msg.fileUrl.split("/").pop()}
-                          </span>
-                        </a>
-                      )}
-                    </div>
+                    </p>
                   )}
+
+                  {/* FILE MESSAGE */}
+                  {msg.type === "file" && renderFileContent(msg, isOwn)}
                 </div>
 
                 {/* Timestamp và status cho tin nhắn của mình */}
