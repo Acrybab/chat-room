@@ -1,7 +1,7 @@
 import { socket } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import useHomeStore from "@/store/home.store";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -115,6 +115,22 @@ export const useHomePage = () => {
   const getCategoryVariant = (category: string) => {
     return variants[category as Category] || "default";
   };
+
+  const getAllOnlineUser = async () => {
+    const response = await axios.get(
+      "https://chat-room-be-production.up.railway.app/users"
+    );
+    console.log(response.data);
+    return response.data;
+  };
+
+  const { data } = useQuery({
+    queryKey: ["allOnlineUsers"],
+    queryFn: getAllOnlineUser,
+  });
+
+  console.log("All online users:", data);
+
   return {
     handleJoinRoom,
     handleCreateRoom,
@@ -127,5 +143,6 @@ export const useHomePage = () => {
     setIsOpenDialog,
     setRoomCategory,
     roomCategory,
+    data,
   };
 };

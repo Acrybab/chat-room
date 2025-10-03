@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,8 +33,13 @@ export const Home = () => {
     setRoomName,
     roomCategory,
     setRoomCategory,
+    data,
   } = useHomePage();
   const { isLoadingAuth, isLoggedIn } = useAuth();
+
+  const onlineUsers = data.data.users.map(
+    (i: { isOnline: any }) => i.isOnline
+  ).lenght;
 
   if (!getToken()) {
     return <Navigate to="/sign-in" replace />;
@@ -156,7 +162,7 @@ export const Home = () => {
           getCategoryVariant={getCategoryVariant}
           handleJoinRoom={handleJoinRoom}
         />
-        <StatsCards />
+        <StatsCards onlineUsers={onlineUsers} />
       </div>
     </div>
   );
