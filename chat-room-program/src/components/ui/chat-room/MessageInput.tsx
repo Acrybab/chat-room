@@ -168,7 +168,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         fileName: file.name,
         fileType: file.type,
       });
-
+      console.log("📤 Emitted sendFileMessage:", {
+        roomId: Number(roomId),
+        userId: userData.data.user.id,
+        fileUrl: fileUrl,
+        fileName: file.name,
+        fileType: file.type,
+      });
       console.log("✅ File uploaded and sent successfully");
     } catch (error) {
       console.error("❌ Error uploading file:", error);
