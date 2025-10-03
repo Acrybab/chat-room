@@ -145,7 +145,7 @@ export const useChatRoom = ({
   const handleNewMessage = useCallback(
     (msg: MessageRealTime) => {
       if (!userData?.data.user.id) return;
-
+      console.log("📥 Received newMessage:", msg);
       setMessages((prev) => {
         const exists = prev.some((existingMsg) => existingMsg.id === msg.id);
         if (exists) return prev;
