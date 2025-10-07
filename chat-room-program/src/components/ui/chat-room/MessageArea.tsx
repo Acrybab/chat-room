@@ -252,7 +252,8 @@ export const MessageArea = ({
                   )}
 
                   {/* FILE MESSAGE */}
-                  {msg.type === "file" && renderFileContent(msg, isOwn)}
+                  {(msg.type === "file" || msg.fileUrl) &&
+                    renderFileContent(msg, isOwn)}
                 </div>
 
                 {/* Timestamp và status cho tin nhắn của mình */}
