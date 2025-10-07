@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { HeaderSection } from "@/components/ui/home-page/HeaderSection";
-import { StatsCards } from "@/components/ui/home-page/StatsCards";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChatRoomList } from "@/features/chat/ChatRoomList";
@@ -161,7 +160,6 @@ export const Home = () => {
           getCategoryVariant={getCategoryVariant}
           handleJoinRoom={handleJoinRoom}
         />
-        <StatsCards />
       </div>
     </div>
   );
