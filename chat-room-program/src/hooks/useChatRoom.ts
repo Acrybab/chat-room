@@ -117,6 +117,8 @@ export const useChatRoom = ({
     }
   }, [messagesData, userData?.data.user.id]);
 
+  console.log("📝 Messages:", messages);
+
   // Auto scroll
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
