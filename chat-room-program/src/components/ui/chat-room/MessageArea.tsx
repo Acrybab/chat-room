@@ -85,7 +85,13 @@ export const MessageArea = ({
   const renderFileContent = (msg: MessageRealTime, isOwn: boolean) => {
     if (!msg.fileUrl) return null;
 
-    const fileType = msg.fileType || "";
+    const fileType =
+      msg.fileType ||
+      (msg.fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        ? "image/*"
+        : msg.fileUrl.match(/\.(mp4|webm|mov)$/i)
+        ? "video/*"
+        : "application/octet-stream");
     const fileName = msg.fileName || msg.fileUrl.split("/").pop() || "file";
     // const getClient: SupabaseClient;
     // IMAGE - Hiển thị như Zalo
