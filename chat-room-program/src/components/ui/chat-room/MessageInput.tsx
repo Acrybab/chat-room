@@ -6,7 +6,16 @@ import {
   TooltipTrigger,
 } from "../tooltip";
 import { Button } from "../button";
-import { Paperclip, Send, Smile, Loader2, Mic, X, Square } from "lucide-react";
+import {
+  Paperclip,
+  Send,
+  Smile,
+  Loader2,
+  Mic,
+  X,
+  Pause,
+  Play,
+} from "lucide-react";
 import { Textarea } from "../textarea";
 import type { MeResponse } from "@/types/chatRoom.types";
 import { socket } from "./socket";
@@ -61,7 +70,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -215,14 +226,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         }
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm",
         });
+        setAudioBlob(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
-
-        // Tự động gửi voice message ngay khi dừng (giống Messenger)
-        await sendVoiceMessage(audioBlob);
       };
 
       mediaRecorder.start();
@@ -238,13 +247,37 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const stopRecording = () => {
+  const pauseRecording = () => {
     if (
       mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
+      mediaRecorderRef.current.state === "recording"
     ) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "paused"
+    ) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsPaused(false);
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
@@ -252,25 +285,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const cancelRecording = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
-      const stream = mediaRecorderRef.current.stream;
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
+      const stream = mediaRecorderRef.current.stream;
       stream.getTracks().forEach((track) => track.stop());
-
-      // Clear chunks để không gửi
-      audioChunksRef.current = [];
     }
     setIsRecording(false);
+    setIsPaused(false);
     setRecordingTime(0);
+    setAudioBlob(null);
+    audioChunksRef.current = [];
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
     }
   };
 
-  const sendVoiceMessage = async (audioBlob: Blob) => {
+  const sendVoiceMessage = async () => {
     if (!audioBlob || !roomId || !userData || !socket) return;
 
     setIsUploading(true);
@@ -311,6 +341,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       console.log("✅ Voice message sent successfully");
 
       // Reset states
+      setAudioBlob(null);
       setRecordingTime(0);
     } catch (error) {
       console.error("❌ Error sending voice message:", error);
@@ -318,6 +349,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const deleteVoiceMessage = () => {
+    setAudioBlob(null);
+    setRecordingTime(0);
   };
 
   return (
@@ -353,6 +389,117 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
 
+        {/* Recording Interface */}
+        {isRecording && (
+          <div className="mb-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {isPaused ? "Đã tạm dừng" : "Đang ghi âm"}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                  {formatTime(recordingTime)}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40"
+                        onClick={cancelRecording}
+                      >
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Hủy</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                        onClick={isPaused ? resumeRecording : pauseRecording}
+                      >
+                        {isPaused ? (
+                          <Play className="h-4 w-4 text-gray-600" />
+                        ) : (
+                          <Pause className="h-4 w-4 text-gray-600" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isPaused ? "Tiếp tục" : "Tạm dừng"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <Button
+                  size="sm"
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                  onClick={stopRecording}
+                >
+                  Dừng
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Recorded Audio */}
+        {audioBlob && !isRecording && (
+          <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <Mic className="h-5 w-5 text-green-600" />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Tin nhắn thoại
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {formatTime(recordingTime)}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40"
+                        onClick={deleteVoiceMessage}
+                      >
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Xóa</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <Button
+                  size="sm"
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                  onClick={sendVoiceMessage}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Gửi"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-end gap-3">
           {/* File attachment button */}
           <TooltipProvider>
@@ -364,7 +511,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   onClick={handleFileButtonClick}
                   type="button"
-                  disabled={isUploading || isRecording}
+                  disabled={isUploading || isRecording || !!audioBlob}
                 >
                   <Paperclip className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 </Button>
@@ -385,8 +532,31 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             multiple={false}
           />
 
-          {/* Message input container hoặc Voice Recording UI */}
-          {!isRecording ? (
+          {/* Voice recording button - chỉ hiện khi không đang ghi âm hoặc có audio preview */}
+          {!isRecording && !audioBlob && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    onClick={startRecording}
+                    type="button"
+                    disabled={isUploading}
+                  >
+                    <Mic className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Ghi âm
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Message input container - ẩn khi đang ghi âm hoặc có audio preview */}
+          {!isRecording && !audioBlob && (
             <>
               <div className="flex-1 relative">
                 <div className="flex items-end bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all relative">
@@ -487,93 +657,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Send button hoặc Mic button */}
-              {message.trim() ? (
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim() || isUploading}
-                  size="icon"
-                  className="h-9 w-9 shrink-0 rounded-full bg-black text-white shadow-sm transition-all"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                        onClick={startRecording}
-                        type="button"
-                        disabled={isUploading}
-                      >
-                        <Mic className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">
-                      Hold to record
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </>
-          ) : (
-            /* Recording UI - giống Messenger */
-            <>
-              {/* Cancel button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 shrink-0 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                      onClick={cancelRecording}
-                    >
-                      <X className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    Cancel
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {/* Recording waveform container */}
-              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {formatTime(recordingTime)}
-                  </span>
-                  <div className="flex-1 flex items-center gap-1 h-8">
-                    {/* Fake waveform animation */}
-                    {[...Array(20)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 bg-blue-500 rounded-full transition-all"
-                        style={{
-                          height: `${Math.random() * 100}%`,
-                          animation: `pulse 0.${
-                            Math.floor(Math.random() * 9) + 1
-                          }s ease-in-out infinite`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stop/Send button */}
+              {/* Send button */}
               <Button
+                onClick={handleSendMessage}
+                disabled={!message.trim() || isUploading}
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all"
-                onClick={stopRecording}
+                className={`h-9 w-9 shrink-0 rounded-full transition-all ${
+                  message.trim() && !isUploading
+                    ? "bg-black text-white shadow-sm"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                }`}
               >
-                <Square className="h-4 w-4 fill-current" />
+                <Send className="h-4 w-4" />
               </Button>
             </>
           )}
