@@ -1,8 +1,8 @@
-import React, { type JSX } from "react";
+import React, { type JSX, useRef, useState, useEffect } from "react";
 import { ScrollArea } from "../scroll-area";
 import { Avatar, AvatarFallback } from "../avatar";
 import { Label } from "../label";
-import { CheckCheck, Download, FileText } from "lucide-react";
+import { CheckCheck, Download, FileText, Play, Pause } from "lucide-react";
 
 import type { MessageRealTime } from "@/hooks/useChatRoom";
 
@@ -15,6 +15,137 @@ interface MessageAreaProps {
   messages: MessageRealTime[];
   currentUserEmail: string | undefined;
 }
+
+// Voice Message Bubble Component
+interface VoiceMessageBubbleProps {
+  audioUrl: string;
+  isOwn: boolean;
+}
+
+const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
+  audioUrl,
+  isOwn,
+}) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const handleLoadedMetadata = () => {
+      setAudioDuration(audio.duration);
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 px-3 py-2 rounded-2xl ${
+        isOwn
+          ? "bg-black text-white"
+          : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+      } min-w-[200px] max-w-[280px]`}
+    >
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+
+      {/* Play/Pause Button */}
+      <button
+        onClick={togglePlay}
+        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+          isOwn
+            ? "bg-white/20 hover:bg-white/30"
+            : "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600"
+        }`}
+      >
+        {isPlaying ? (
+          <Pause className="w-4 h-4 fill-current" />
+        ) : (
+          <Play className="w-4 h-4 fill-current ml-0.5" />
+        )}
+      </button>
+
+      {/* Waveform & Progress */}
+      <div className="flex-1 flex flex-col gap-1">
+        {/* Waveform visualization */}
+        <div className="relative h-6 flex items-center gap-0.5">
+          {[...Array(25)].map((_, i) => {
+            const height = Math.sin(i * 0.5) * 40 + 50;
+            const isPassed = (i / 25) * 100 < progress;
+            return (
+              <div
+                key={i}
+                className={`flex-1 rounded-full transition-all ${
+                  isPassed
+                    ? isOwn
+                      ? "bg-white"
+                      : "bg-gray-600 dark:bg-gray-300"
+                    : isOwn
+                    ? "bg-white/30"
+                    : "bg-gray-300 dark:bg-gray-600"
+                }`}
+                style={{
+                  height: `${height}%`,
+                  minWidth: "2px",
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Time Display */}
+      <div
+        className={`flex-shrink-0 text-xs font-medium ${
+          isOwn ? "text-white/90" : "text-gray-600 dark:text-gray-400"
+        }`}
+      >
+        {formatTime(isPlaying ? currentTime : audioDuration)}
+      </div>
+    </div>
+  );
+};
 
 export const MessageArea = ({
   currentUserEmail,
@@ -91,16 +222,27 @@ export const MessageArea = ({
         ? "image/*"
         : msg.fileUrl.match(/\.(mp4|webm|mov)$/i)
         ? "video/*"
+        : msg.fileUrl.match(/\.(webm|mp3|wav|ogg|m4a)$/i)
+        ? "audio/*"
         : "application/octet-stream");
     const fileName = msg.fileName || msg.fileUrl.split("/").pop() || "file";
-    // const getClient: SupabaseClient;
-    // IMAGE - Hiển thị như Zalo
+
     console.log("Rendering file message:", {
       fileType,
       fileName,
       fileUrl: msg.fileUrl,
     });
 
+    // VOICE MESSAGE - Hiển thị giống Messenger
+    if (fileType.startsWith("audio/") || fileName.includes("voice-message")) {
+      return (
+        <div className="mt-1">
+          <VoiceMessageBubble audioUrl={msg.fileUrl} isOwn={isOwn} />
+        </div>
+      );
+    }
+
+    // IMAGE - Hiển thị như Zalo
     if (fileType.startsWith("image/")) {
       return (
         <div className="mt-1">
@@ -186,6 +328,13 @@ export const MessageArea = ({
           const isOwn = msg.user.id === userId;
           const prevMsg = index > 0 ? messages[index - 1] : undefined;
           const showHeader = shouldShowHeader(msg, prevMsg);
+
+          // Check if it's a voice message
+          const isVoiceMessage =
+            msg.fileUrl &&
+            (msg.fileType?.startsWith("audio/") ||
+              msg.fileName?.includes("voice-message"));
+
           return (
             <div
               key={index}
@@ -228,8 +377,9 @@ export const MessageArea = ({
                 {/* Bong bóng tin nhắn */}
                 <div
                   className={`relative rounded-2xl max-w-full break-words transition-all duration-200 group-hover:shadow-sm ${
-                    msg.type === "file" && msg.fileType?.startsWith("image/")
-                      ? "" // Không có padding cho ảnh
+                    msg.type === "file" &&
+                    (msg.fileType?.startsWith("image/") || isVoiceMessage)
+                      ? "" // Không có padding cho ảnh và voice message
                       : "px-4 py-2" // Có padding cho text và file khác
                   } ${
                     isOwn
