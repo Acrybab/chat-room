@@ -35,30 +35,54 @@ export const ChatRoomList = ({
   const { meData, rooms, setRooms, isLoading } = useChatRoomList();
 
   useEffect(() => {
+    console.log("🔧 Setting up socket listener, current socket state:", {
+      exists: !!socket,
+      connected: socket?.connected,
+      id: socket?.id,
+    });
+
     if (!socket || !socket.connected) {
       console.warn("⚠️ Socket not connected");
       return;
     }
+
     const handleAddedToRoom = (payload: { room: Room }) => {
-      console.log("🎉 Added to room:", payload.room);
+      console.log("🎉 RECEIVED addedToRoom event:", {
+        payload,
+        currentRoomsCount: rooms.length,
+        timestamp: new Date().toISOString(),
+      });
 
+      // Use array update directly since setRooms does not accept an updater function
       const isDuplicate = rooms.some((r) => r.id === payload.room.id);
-      if (isDuplicate) return;
 
-      // ✅ Hiển thị notification
+      if (isDuplicate) {
+        console.warn("⚠️ Room already exists, skipping");
+        return;
+      }
+
       toast.success(`You were added to ${payload.room.name}`, {
         description: payload.room.description,
         duration: 5000,
       });
 
-      setRooms([...rooms, payload.room]);
+      const newRooms = [...rooms, payload.room];
+      console.log("✅ Updated rooms array:", {
+        oldCount: rooms.length,
+        newCount: newRooms.length,
+      });
+
+      setRooms(newRooms);
     };
+
+    console.log("📡 Registering addedToRoom listener");
     socket.on("addedToRoom", handleAddedToRoom);
 
     return () => {
+      console.log("🧹 Cleaning up addedToRoom listener");
       socket.off("addedToRoom", handleAddedToRoom);
     };
-  }, [setRooms]); // ✅ Chỉ cần setRooms, không cần rooms
+  }, [setRooms]);
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
