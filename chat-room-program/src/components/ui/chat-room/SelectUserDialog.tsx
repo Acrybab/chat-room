@@ -23,7 +23,6 @@ export const SelectUserDialog = ({
 }: SelectUserDialogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-
   const getAllUsersFunction = async () => {
     const respone = await axios.get(
       "https://chat-room-be-production.up.railway.app/users"
@@ -89,7 +88,6 @@ export const SelectUserDialog = ({
         console.log("📥 Server response:", response);
       }
     );
-
     setSelectedUsers([]);
     setOpenDialog(false);
   };

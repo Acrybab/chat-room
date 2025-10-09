@@ -11,6 +11,7 @@ import {
 import { socket } from "@/components/ui/chat-room/socket";
 import { useChatRoomList } from "@/hooks/useChatRoomList";
 import type { Room } from "@/types/chatRoom.types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Clock,
@@ -33,6 +34,7 @@ export const ChatRoomList = ({
   handleJoinRoom,
 }: ChatRoomListProps) => {
   const { meData, rooms, setRooms, isLoading } = useChatRoomList();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     console.log("🔧 Setting up socket listener, current socket state:", {
@@ -47,6 +49,7 @@ export const ChatRoomList = ({
     }
 
     const handleAddedToRoom = (payload: { room: Room }) => {
+      console.log("day ne");
       console.log("🎉 RECEIVED addedToRoom event:", {
         payload,
         currentRoomsCount: rooms.length,
@@ -71,6 +74,7 @@ export const ChatRoomList = ({
         oldCount: rooms.length,
         newCount: newRooms.length,
       });
+      queryClient.invalidateQueries({ queryKey: ["chatRooms"] });
 
       setRooms(newRooms);
     };
