@@ -58,7 +58,7 @@ export const ChatRoomList = ({
     return () => {
       socket.off("addedToRoom", handleAddedToRoom);
     };
-  }, [setRooms, rooms]); // ✅ Chỉ cần setRooms, không cần rooms
+  }, [setRooms]); // ✅ Chỉ cần setRooms, không cần rooms
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
