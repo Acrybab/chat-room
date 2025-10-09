@@ -60,6 +60,7 @@ export const Room = () => {
     handleTyping,
     isTyping,
     roomDetail,
+    isLoadingMessages,
   } = useChatRoom({
     message,
     setMessage,
@@ -170,6 +171,7 @@ export const Room = () => {
           isTyping={isTyping}
           messages={messages}
           currentUserEmail={userData?.data.user.email}
+          isLoadingMessages={isLoadingMessages}
         />
 
         <MessageInput

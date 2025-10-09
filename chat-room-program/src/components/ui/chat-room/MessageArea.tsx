@@ -16,6 +16,7 @@ interface MessageAreaProps {
   userId: number | undefined;
   messages: MessageRealTime[];
   currentUserEmail: string | undefined;
+  isLoadingMessages: boolean;
 }
 
 // Voice Message Bubble Component
@@ -157,6 +158,7 @@ export const MessageArea = ({
   isTyping,
   messages,
   getInitials,
+  isLoadingMessages,
 }: MessageAreaProps) => {
   const shouldShowHeader = (
     current: MessageRealTime,
@@ -327,6 +329,58 @@ export const MessageArea = ({
   return (
     <ScrollArea className="flex-1 px-4 py-6">
       <div className="space-y-4 pb-6 max-w-4xl mx-auto">
+        {isLoadingMessages && (
+          <>
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className={`flex gap-3 animate-pulse ${
+                  i % 2 === 0 ? "justify-start" : "justify-end"
+                }`}
+              >
+                {/* Avatar skeleton cho tin nhắn bên trái */}
+                {i % 2 === 0 && (
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                  </div>
+                )}
+
+                {/* Message bubble skeleton */}
+                <div
+                  className={`flex flex-col ${
+                    i % 2 === 0 ? "items-start" : "items-end"
+                  }`}
+                >
+                  {/* Header skeleton */}
+                  {i % 2 === 0 && (
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                      <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                      <div className="h-2 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+                  )}
+
+                  {/* Bubble skeleton với width ngẫu nhiên */}
+                  <div
+                    className={`rounded-2xl ${
+                      i % 2 === 0
+                        ? "bg-gray-200 dark:bg-gray-700 rounded-bl-md"
+                        : "bg-gray-300 dark:bg-gray-600 rounded-br-md"
+                    }`}
+                    style={{
+                      width: `${150 + Math.random() * 150}px`,
+                      height: `${40 + Math.random() * 20}px`,
+                    }}
+                  ></div>
+
+                  {/* Timestamp skeleton cho tin nhắn bên phải */}
+                  {i % 2 !== 0 && (
+                    <div className="h-2 w-16 bg-gray-200 dark:bg-gray-700 rounded mt-1"></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
         {messages.map((msg, index) => {
           const isOwn = msg.user.id === userId;
           const prevMsg = index > 0 ? messages[index - 1] : undefined;
