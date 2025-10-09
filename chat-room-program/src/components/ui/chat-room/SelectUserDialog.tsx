@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import { Dialog, DialogContent, DialogHeader } from "../dialog";
 import { useQuery } from "@tanstack/react-query";
@@ -68,17 +69,26 @@ export const SelectUserDialog = ({
     }
 
     const userIds = selectedUsers.map((user) => user.id);
-    console.log("🚀 Emitting addUserToRoom with:", {
+
+    console.log("🚀 Emitting addUserToRoom:", {
       roomId: parseInt(roomId),
       ownerId: ownerId,
       newUserIds: userIds,
+      socketConnected: socket.connected,
+      socketId: socket.id,
     });
 
-    socket.emit("addUserToRoom", {
-      roomId: parseInt(roomId),
-      ownerId: ownerId,
-      newUserIds: userIds,
-    });
+    socket.emit(
+      "addUserToRoom",
+      {
+        roomId: parseInt(roomId),
+        ownerId: ownerId,
+        newUserIds: userIds,
+      },
+      (response: any) => {
+        console.log("📥 Server response:", response);
+      }
+    );
 
     setSelectedUsers([]);
     setOpenDialog(false);
