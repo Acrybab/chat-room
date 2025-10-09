@@ -3,7 +3,9 @@ import { ScrollArea } from "../scroll-area";
 import { Avatar, AvatarFallback } from "../avatar";
 import { Label } from "../label";
 import { CheckCheck, Download, FileText, Play, Pause } from "lucide-react";
-
+import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
+import placeHolderBackGround from "../../../../public/grey_background.jpg";
 import type { MessageRealTime } from "@/hooks/useChatRoom";
 
 interface MessageAreaProps {
@@ -246,7 +248,8 @@ export const MessageArea = ({
     if (fileType.startsWith("image/")) {
       return (
         <div className="mt-1">
-          <img
+          <LazyLoadImage
+            placeholderSrc={placeHolderBackGround}
             src={msg.fileUrl}
             alt={fileName}
             className="max-w-[300px] max-h-[400px] rounded-lg cursor-pointer hover:opacity-95 transition-opacity object-cover"
