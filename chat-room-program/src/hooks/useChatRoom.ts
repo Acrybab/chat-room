@@ -99,11 +99,12 @@ export const useChatRoom = ({
     return response.data;
   };
 
-  const { data: messagesData } = useQuery<MessageResponse>({
-    queryKey: ["messages", roomId],
-    queryFn: getMessagesFunction,
-    enabled: !!roomId,
-  });
+  const { data: messagesData, isLoading: isLoadingMessages } =
+    useQuery<MessageResponse>({
+      queryKey: ["messages", roomId],
+      queryFn: getMessagesFunction,
+      enabled: !!roomId,
+    });
 
   // Set messages
   useEffect(() => {
@@ -330,5 +331,6 @@ export const useChatRoom = ({
     roomDetail,
     typingUsers, // 🆕 để hiển thị "typing..."
     isTyping: typingUsers.length > 0, // 🆕 có ai đang gõ không
+    isLoadingMessages,
   };
 };
