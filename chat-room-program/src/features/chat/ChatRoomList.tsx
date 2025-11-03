@@ -159,6 +159,7 @@ export const ChatRoomList = ({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
       {rooms.map((room) => (
         <Card
+          onClick={() => handleJoinRoom(room.id, meData!.data.user.id)}
           key={room.id}
           className="group relative overflow-hidden bg-gradient-to-br from-background to-muted/20 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border-2 hover:border-primary/20 backdrop-blur-sm"
         >
@@ -288,30 +289,32 @@ export const ChatRoomList = ({
             </div>
 
             {/* Enhanced Join Button */}
-            <Button
-              onClick={() => handleJoinRoom(room.id, meData!.data.user.id)}
-              className={`w-full gap-3 group/btn relative overflow-hidden text-base font-semibold py-6 rounded-xl transition-all duration-300 ${
-                room.isActive
-                  ? "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-primary/25"
-                  : "bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary border-2 border-border hover:border-primary/50"
-              }`}
-              variant={room.isActive ? "default" : "outline"}
-            >
-              {/* Button background animation */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
+            {room.owner.id && (
+              <Button
+                onClick={() => handleJoinRoom(room.id, meData!.data.user.id)}
+                className={`w-full gap-3 group/btn relative overflow-hidden text-base font-semibold py-6 rounded-xl transition-all duration-300 ${
+                  room.isActive
+                    ? "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-primary/25"
+                    : "bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary border-2 border-border hover:border-primary/50"
+                }`}
+                variant={room.isActive ? "default" : "outline"}
+              >
+                {/* Button background animation */}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
 
-              <div className="relative flex items-center gap-3">
-                {room.isActive ? (
-                  <>
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    Join Live Room
-                  </>
-                ) : (
-                  "Join Room"
-                )}
-                <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform duration-300" />
-              </div>
-            </Button>
+                <div className="relative flex items-center gap-3">
+                  {room.isActive ? (
+                    <>
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      Join Live Room
+                    </>
+                  ) : (
+                    "Join Room"
+                  )}
+                  <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                </div>
+              </Button>
+            )}
           </CardContent>
 
           {/* Corner decoration */}
