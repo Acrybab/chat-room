@@ -7,7 +7,6 @@ import { useState } from "react";
 import type { User, UserResponse } from "@/types/user.types";
 import { socket } from "./socket";
 import { Button } from "../button";
-
 interface SelectUserDialogProps {
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
@@ -144,7 +143,7 @@ export const SelectUserDialog = ({
                     key={user.id}
                     className="flex items-center bg-gray-100 text-black px-3 py-1 rounded-full text-sm font-medium"
                   >
-                    {user.chatRoomMembers.find(
+                    {user.chatRoomMembers?.find(
                       (member) => member.isAdmin === true
                     ) ? (
                       ""
