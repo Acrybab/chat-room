@@ -289,7 +289,7 @@ export const ChatRoomList = ({
             </div>
 
             {/* Enhanced Join Button */}
-            {room.owner.id && (
+            {!room.owner.id && (
               <Button
                 onClick={() => handleJoinRoom(room.id, meData!.data.user.id)}
                 className={`w-full gap-3 group/btn relative overflow-hidden text-base font-semibold py-6 rounded-xl transition-all duration-300 ${
