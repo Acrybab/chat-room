@@ -48,7 +48,7 @@ export const useHomePage = () => {
     queryFn: getAllUsersFunction,
   });
   const isOwner = data?.data.users.map((user) =>
-    user.chatRoomMembers?.find((member) => member.isAdmin === true)
+    user.chatRoomMembers?.filter((member) => member.isAdmin === true)
   );
   const users = data?.data.users || [];
 
