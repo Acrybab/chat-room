@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { User, UserResponse } from "@/types/user.types";
 import { socket } from "./socket";
 import { Button } from "../button";
+import { useAuth } from "@/hooks/useAuth";
 interface SelectUserDialogProps {
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
@@ -22,6 +23,7 @@ export const SelectUserDialog = ({
 }: SelectUserDialogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const { isLoggedIn } = useAuth();
   const getAllUsersFunction = async () => {
     const respone = await axios.get(
       "https://chat-room-be-production.up.railway.app/users"
@@ -144,9 +146,7 @@ export const SelectUserDialog = ({
                     key={user.id}
                     className="flex items-center bg-gray-100 text-black px-3 py-1 rounded-full text-sm font-medium"
                   >
-                    {user.chatRoomMembers?.find(
-                      (member) => member.isAdmin === true
-                    ) ? null : (
+                    {isLoggedIn ? null : (
                       <div>
                         <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
                           {user.email.charAt(0).toUpperCase()}
