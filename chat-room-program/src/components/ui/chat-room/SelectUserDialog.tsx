@@ -138,6 +138,7 @@ export const SelectUserDialog = ({
           <div className="px-6 py-3 border-b border-gray-100">
             <div className="flex flex-wrap gap-2">
               {selectedUsers.map((user) => {
+                console.log(user, "user");
                 return (
                   <div
                     key={user.id}
@@ -145,9 +146,7 @@ export const SelectUserDialog = ({
                   >
                     {user.chatRoomMembers?.find(
                       (member) => member.isAdmin === true
-                    ) ? (
-                      ""
-                    ) : (
+                    ) ? null : (
                       <div>
                         <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
                           {user.email.charAt(0).toUpperCase()}
