@@ -139,17 +139,6 @@ export const HeaderActions = ({
         openDialog={openDialog}
         setOpenDialog={setOpenDialog}
       />
-      {/* {callOpen && (
-        <VideoCallModal
-          roomId={Number(roomId)}
-          userId={Number(userId)}
-          socket={socket}
-          onClose={() => setCallOpen(false)}
-        />
-      )} */}
-      {/* {callOpen && (
-        <VideoChat roomId={roomId} identity={userId} onClose={handleClose} />
-      )} */}
     </div>
   );
 };
