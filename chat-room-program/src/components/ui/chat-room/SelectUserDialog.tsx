@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import { Dialog, DialogContent, DialogHeader } from "../dialog";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { useState } from "react";
 import type { User, UserResponse } from "@/types/user.types";
@@ -23,6 +23,7 @@ export const SelectUserDialog = ({
 }: SelectUserDialogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const queryClient = useQueryClient();
   const getAllUsersFunction = async () => {
     const respone = await axios.get(
       "https://chat-room-be-production.up.railway.app/users"
@@ -71,14 +72,6 @@ export const SelectUserDialog = ({
 
     const userIds = selectedUsers.map((user) => user.id);
 
-    console.log("🚀 Emitting addUserToRoom:", {
-      roomId: parseInt(roomId),
-      ownerId: ownerId,
-      newUserIds: userIds,
-      socketConnected: socket.connected,
-      socketId: socket.id,
-    });
-
     socket.emit(
       "addUserToRoom",
       {
@@ -90,6 +83,8 @@ export const SelectUserDialog = ({
         console.log("📥 Server response:", response);
       }
     );
+    queryClient.invalidateQueries({ queryKey: ["onlineUsers"] });
+
     setSelectedUsers([]);
     setOpenDialog(false);
   };

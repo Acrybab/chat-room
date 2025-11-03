@@ -1,12 +1,14 @@
 import { socket } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import useHomeStore from "@/store/home.store";
+import type { User } from "@/types/user.types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 export type CreateRoomType = {
-  data: { roomName: string; description: string; roomCategory: string };
+  data: { roomName: string };
 };
 export const useHomePage = () => {
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ export const useHomePage = () => {
     roomCategory,
     setRoomCategory,
   } = useHomeStore();
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+
   const handleJoinRoom = (roomId: number) => {
     // Join room
     socket.emit("joinRoom", { roomId: roomId });
@@ -35,8 +39,7 @@ export const useHomePage = () => {
       "https://chat-room-be-production.up.railway.app/chat-rooms",
       {
         name: data.roomName,
-        description: data.description,
-        category: data.roomCategory,
+        memberIds: selectedUsers.map((user) => user.id),
       },
       {
         headers: {
@@ -71,11 +74,7 @@ export const useHomePage = () => {
     },
   });
 
-  const handleCreateRoom = (
-    roomName: string,
-    description: string,
-    roomCategory: string
-  ) => {
+  const handleCreateRoom = (roomName: string) => {
     if (!roomName.trim()) {
       toast.error("Room name cannot be empty.", {
         position: "top-right",
@@ -84,24 +83,8 @@ export const useHomePage = () => {
       });
       return;
     }
-    if (!description.trim()) {
-      toast.error("Description cannot be empty.", {
-        position: "top-right",
-        duration: 4000,
-        className: "bg-red-500 text-white font-semibold shadow-lg",
-      });
-      return;
-    }
-    if (!roomCategory.trim()) {
-      toast.error("Category cannot be empty.", {
-        position: "top-right",
-        duration: 4000,
-        className: "bg-red-500 text-white font-semibold shadow-lg",
-      });
-      return;
-    }
 
-    createChatRoom({ data: { roomName, description, roomCategory } });
+    createChatRoom({ data: { roomName } });
   };
 
   const variants = {
@@ -128,5 +111,7 @@ export const useHomePage = () => {
     setIsOpenDialog,
     setRoomCategory,
     roomCategory,
+    setSelectedUsers,
+    selectedUsers,
   };
 };
