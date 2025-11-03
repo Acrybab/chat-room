@@ -1,14 +1,15 @@
 import { socket } from "@/components/ui/chat-room/socket";
 import { getToken } from "@/lib/cookies";
 import useHomeStore from "@/store/home.store";
-import type { User } from "@/types/user.types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { User, UserResponse } from "@/types/user.types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "./useAuth";
 export type CreateRoomType = {
-  data: { roomName: string };
+  data: { roomName: string; memberIds: number[] };
 };
 export const useHomePage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,8 @@ export const useHomePage = () => {
     setRoomCategory,
   } = useHomeStore();
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { loggedInUser } = useAuth();
 
   const handleJoinRoom = (roomId: number) => {
     // Join room
@@ -33,7 +36,27 @@ export const useHomePage = () => {
     });
     navigate(`/room/${roomId}`);
   };
+  const getAllUsersFunction = async () => {
+    const respone = await axios.get(
+      "https://chat-room-be-production.up.railway.app/users"
+    );
+    return respone.data;
+  };
 
+  const { data, isLoading, error } = useQuery<UserResponse>({
+    queryKey: ["users"],
+    queryFn: getAllUsersFunction,
+  });
+  const isOwner = data?.data.users.map((user) =>
+    user.chatRoomMembers?.find((member) => member.isAdmin === true)
+  );
+  const users = data?.data.users || [];
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      user.id !== loggedInUser?.id
+  );
   const createChatRoomFunction = async ({ data }: CreateRoomType) => {
     const response = await axios.post(
       "https://chat-room-be-production.up.railway.app/chat-rooms",
@@ -47,7 +70,6 @@ export const useHomePage = () => {
         },
       }
     );
-
     return response.data;
   };
   const queryClient = useQueryClient();
@@ -73,7 +95,7 @@ export const useHomePage = () => {
       });
     },
   });
-
+  console.log(isOwner, "isOwner");
   const handleCreateRoom = (roomName: string) => {
     if (!roomName.trim()) {
       toast.error("Room name cannot be empty.", {
@@ -84,7 +106,9 @@ export const useHomePage = () => {
       return;
     }
 
-    createChatRoom({ data: { roomName } });
+    createChatRoom({
+      data: { roomName, memberIds: selectedUsers.map((user) => user.id) },
+    });
   };
 
   const variants = {
@@ -113,5 +137,11 @@ export const useHomePage = () => {
     roomCategory,
     setSelectedUsers,
     selectedUsers,
+    setSearchQuery,
+    isLoading,
+    error,
+    searchQuery,
+    filteredUsers,
+    isOwner,
   };
 };

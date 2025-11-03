@@ -15,11 +15,8 @@ import { ChatRoomList } from "@/features/chat/ChatRoomList";
 import { useAuth } from "@/hooks/useAuth";
 import { useHomePage } from "@/hooks/useHomePage";
 import { getToken } from "@/lib/cookies";
-import type { User, UserResponse } from "@/types/user.types";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import type { User } from "@/types/user.types";
 import { Plus } from "lucide-react";
-import { useState } from "react";
 import { Navigate } from "react-router-dom";
 
 export const Home = () => {
@@ -33,24 +30,14 @@ export const Home = () => {
     setRoomName,
     selectedUsers,
     setSelectedUsers,
+    setSearchQuery,
+    isLoading,
+    error,
+    searchQuery,
+    filteredUsers,
   } = useHomePage();
-  const { isLoadingAuth, isLoggedIn, loggedInUser } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { isLoadingAuth, isLoggedIn } = useAuth();
 
-  const getAllUsersFunction = async () => {
-    const respone = await axios.get(
-      "https://chat-room-be-production.up.railway.app/users"
-    );
-    return respone.data;
-  };
-
-  const { data, isLoading, error } = useQuery<UserResponse>({
-    queryKey: ["users"],
-    queryFn: getAllUsersFunction,
-  });
-  // const onlineUsers = data.data.users.map(
-  //   (i: { isOnline: any }) => i.isOnline
-  // ).lenght;
   const removeSelectedUser = (userId: number) => {
     setSelectedUsers((prev) => prev.filter((u) => u.id !== userId));
   };
@@ -65,13 +52,7 @@ export const Home = () => {
   if (!isLoggedIn) {
     return <Navigate to="/sign-in" replace />;
   }
-  const users = data?.data.users || [];
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      user.id !== loggedInUser?.id
-  );
   const isUserSelected = (userId: number) => {
     return selectedUsers.some((u) => u.id === userId);
   };
@@ -345,32 +326,6 @@ export const Home = () => {
                       );
                     })}
                   </div>
-
-                  {/* Footer Actions */}
-                  {/* {selectedUsers.length > 0 && (
-                    <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">
-                          {selectedUsers.length} people selected
-                        </span>
-                        <div className="flex space-x-3">
-                          <Button
-                            variant={"outline"}
-                            onClick={() => setSelectedUsers([])}
-                            className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors duration-150"
-                          >
-                            Clear
-                          </Button>
-                          <Button
-                            onClick={handleAddUserToGroup}
-                            className="px-6 py-2 text-white font-medium rounded-full transition-all duration-150 shadow-sm hover:shadow-md"
-                          >
-                            Add to Group
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )} */}
                 </div>
               </div>
 
