@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { User, UserResponse } from "@/types/user.types";
 import { socket } from "./socket";
 import { Button } from "../button";
-import { useAuth } from "@/hooks/useAuth";
+// import { useAuth } from "@/hooks/useAuth";
 interface SelectUserDialogProps {
   openDialog: boolean;
   setOpenDialog: (open: boolean) => void;
@@ -23,7 +23,6 @@ export const SelectUserDialog = ({
 }: SelectUserDialogProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-  const { isLoggedIn } = useAuth();
   const getAllUsersFunction = async () => {
     const respone = await axios.get(
       "https://chat-room-be-production.up.railway.app/users"
@@ -39,8 +38,10 @@ export const SelectUserDialog = ({
   const users = data?.data.users || [];
 
   // Filter users based on search query
-  const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      user.id !== ownerId
   );
 
   const toggleUserSelection = (user: User) => {
@@ -140,40 +141,37 @@ export const SelectUserDialog = ({
           <div className="px-6 py-3 border-b border-gray-100">
             <div className="flex flex-wrap gap-2">
               {selectedUsers.map((user) => {
-                console.log(user, "user");
                 return (
                   <div
                     key={user.id}
                     className="flex items-center bg-gray-100 text-black px-3 py-1 rounded-full text-sm font-medium"
                   >
-                    {isLoggedIn ? null : (
-                      <div>
-                        <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
-                          {user.email.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="max-w-24 truncate">
-                          {user.email.split("@")[0]}
-                        </span>
-                        <button
-                          onClick={() => removeSelectedUser(user.id)}
-                          className="ml-2 hover:bg-gray-200 rounded-full p-0.5 transition-colors duration-150"
-                        >
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
+                    <div>
+                      <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs font-semibold mr-2">
+                        {user.email.charAt(0).toUpperCase()}
                       </div>
-                    )}
+                      <span className="max-w-24 truncate">
+                        {user.email.split("@")[0]}
+                      </span>
+                      <button
+                        onClick={() => removeSelectedUser(user.id)}
+                        className="ml-2 hover:bg-gray-200 rounded-full p-0.5 transition-colors duration-150"
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
