@@ -179,13 +179,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       const responseFromAI = await axios.post(
         `https://api.dify.ai/v1/audio-to-text`,
+        formData,
         {
           headers: {
             Authorization: `Bearer app-Pr1pAnU3MhSw1EocZZX0JYhw`,
-            "Content-Type": "form-data",
-          },
-          data: {
-            audio_file: file,
+            "Content-Type": "multipart/form-data",
           },
         }
       );
