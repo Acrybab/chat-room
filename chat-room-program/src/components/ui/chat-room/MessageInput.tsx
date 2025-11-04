@@ -24,7 +24,6 @@ import EmojiPicker from "emoji-picker-react";
 import { Theme } from "emoji-picker-react";
 import { SkinTones } from "emoji-picker-react";
 import { getToken } from "@/lib/cookies";
-import axios from "axios";
 
 interface MessageInputProps {
   message: string;
@@ -176,19 +175,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       if (!data.success) {
         throw new Error(data.error || "Upload failed");
       }
-
-      const responseFromAI = await axios.post(
-        `https://api.dify.ai/v1/audio-to-text`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer app-Pr1pAnU3MhSw1EocZZX0JYhw`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      console.log("Transcription result:", responseFromAI.data);
 
       const fileUrl = data.fileUrl;
 
