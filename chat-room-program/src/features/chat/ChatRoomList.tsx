@@ -1,13 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { socket } from "@/components/ui/chat-room/socket";
 import { useChatRoomList } from "@/hooks/useChatRoomList";
 import type { Room } from "@/types/chatRoom.types";
@@ -29,10 +23,7 @@ interface ChatRoomListProps {
   handleJoinRoom: (roomId: number, userId: number) => void;
 }
 
-export const ChatRoomList = ({
-  getCategoryVariant,
-  handleJoinRoom,
-}: ChatRoomListProps) => {
+export const ChatRoomList = ({ handleJoinRoom }: ChatRoomListProps) => {
   const { meData, rooms, setRooms, isLoading } = useChatRoomList();
   const queryClient = useQueryClient();
 
@@ -49,13 +40,6 @@ export const ChatRoomList = ({
     }
 
     const handleAddedToRoom = (payload: { room: Room }) => {
-      console.log("day ne");
-      console.log("🎉 RECEIVED addedToRoom event:", {
-        payload,
-        currentRoomsCount: rooms.length,
-        timestamp: new Date().toISOString(),
-      });
-
       // Use array update directly since setRooms does not accept an updater function
       const isDuplicate = rooms.some((r) => r.id === payload.room.id);
 
@@ -70,21 +54,16 @@ export const ChatRoomList = ({
       });
 
       const newRooms = [...rooms, payload.room];
-      console.log("✅ Updated rooms array:", {
-        oldCount: rooms.length,
-        newCount: newRooms.length,
-      });
+
       queryClient.invalidateQueries({ queryKey: ["chatRooms"] });
 
       setRooms(newRooms);
     };
 
-    console.log("📡 Registering addedToRoom listener");
     socket.on("addedToRoom", handleAddedToRoom);
 
     return () => {
-      console.log("🧹 Cleaning up addedToRoom listener");
-      socket.off("addedToRoom", handleAddedToRoom);
+      socket?.off("addedToRoom", handleAddedToRoom);
     };
   }, [setRooms]);
   if (isLoading) {
@@ -207,13 +186,6 @@ export const ChatRoomList = ({
 
                   {/* Enhanced badges */}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <Badge
-                      variant={getCategoryVariant(room.category)}
-                      className="text-xs font-semibold px-3 py-1 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      {room.category}
-                    </Badge>
-
                     {room.isActive && (
                       <Badge className="text-xs bg-green-500/20 text-green-700 border-green-500/30 px-2 py-1 animate-pulse">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1" />
@@ -238,11 +210,6 @@ export const ChatRoomList = ({
 
           <CardContent className="space-y-5 relative z-10">
             {/* Enhanced description */}
-            <div className="bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl p-4 border border-muted/50 backdrop-blur-sm">
-              <CardDescription className="text-sm leading-relaxed text-muted-foreground">
-                {room.description || "No description available"}
-              </CardDescription>
-            </div>
 
             {/* Enhanced Stats with icons */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-accent/20 to-accent/10 rounded-xl border border-accent/20">

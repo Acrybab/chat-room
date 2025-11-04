@@ -78,28 +78,28 @@ export const SignIn = () => {
       handleLogIn(user);
       setToken(token);
 
-      if (socket.connected) {
+      if (socket?.connected) {
         socket.disconnect();
       }
 
-      socket.io.opts.query = {
+      socket!.io.opts.query = {
         userId: user.id.toString(),
       };
-      socket.auth = { userId: user.id, token };
+      socket!.auth = { userId: user.id, token };
 
-      socket.connect();
+      socket!.connect();
 
-      socket.on("connect", () => {
-        console.log("✅ Socket connected:", socket.id);
+      socket?.on("connect", () => {
+        console.log("✅ Socket connected:", socket?.id);
         console.log("✅ UserId sent:", user.id);
-        socket.emit("onlineUser", { userId: user.id });
+        socket?.emit("onlineUser", { userId: user.id });
       });
 
-      socket.on("connect_error", (error) => {
+      socket?.on("connect_error", (error) => {
         console.error("❌ Socket connect error:", error);
       });
 
-      socket.on("userStatusChanged", (data) => {
+      socket?.on("userStatusChanged", (data) => {
         console.log("👥 User status changed:", data);
       });
 

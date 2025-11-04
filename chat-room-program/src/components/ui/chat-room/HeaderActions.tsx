@@ -45,7 +45,7 @@ export const HeaderActions = ({
   const [openDialog, setOpenDialog] = useState(false);
 
   const handleStartCall = () => {
-    socket.emit("startCall", {
+    socket?.emit("startCall", {
       roomId: Number(roomId),
       userId: Number(userId),
       callType: "video",
