@@ -74,7 +74,7 @@ export const useChatRoomList = () => {
     socket.on("userStatusChanged", handleUserStatusChanged);
 
     return () => {
-      socket.off("userStatusChanged", handleUserStatusChanged);
+      socket?.off("userStatusChanged", handleUserStatusChanged);
     };
   }, []);
 
@@ -98,7 +98,7 @@ export const useChatRoomList = () => {
     socket.on("userStatusChanged", handleUserStatusChanged);
 
     return () => {
-      socket.off("userStatusChanged", handleUserStatusChanged);
+      socket?.off("userStatusChanged", handleUserStatusChanged);
     };
   }, []);
 

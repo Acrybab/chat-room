@@ -162,8 +162,19 @@ class SocketManager {
 }
 
 export const socketManager = SocketManager.getInstance();
-export let socket = socketManager.getSocket();
+export let socket: Socket | null = null;
+
 export const setupSocket = async () => {
-  socket = (await socketManager.initializeSocket())!;
+  const userId = await socketManager.getUserId();
+
+  if (!userId) {
+    console.error("❌ Cannot setup socket: userId not found");
+    return null;
+  }
+
+  socketManager.setUserId(userId);
+  socketManager.reconnectWithUser(userId);
+  socket = socketManager.getSocket();
+
   return socket;
 };

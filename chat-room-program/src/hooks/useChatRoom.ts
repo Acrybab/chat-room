@@ -51,7 +51,7 @@ export const useChatRoom = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<MessageRealTime[]>([]);
-  const [isConnected, setIsConnected] = useState(socket.connected);
+  const [isConnected, setIsConnected] = useState(socket?.connected);
   const [typingUsers, setTypingUsers] = useState<number[]>([]);
   let typingTimeout: NodeJS.Timeout;
 
@@ -134,13 +134,13 @@ export const useChatRoom = ({
       setIsConnected(false);
     };
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    setIsConnected(socket.connected);
+    socket?.on("connect", onConnect);
+    socket?.on("disconnect", onDisconnect);
+    setIsConnected(socket?.connected);
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
+      socket?.off("connect", onConnect);
+      socket?.off("disconnect", onDisconnect);
     };
   }, []);
 
@@ -167,18 +167,18 @@ export const useChatRoom = ({
   useEffect(() => {
     if (!userData?.data.user.id || !isConnected) return;
 
-    socket.off("newMessage", handleNewMessage);
-    socket.on("newMessage", handleNewMessage);
+    socket?.off("newMessage", handleNewMessage);
+    socket?.on("newMessage", handleNewMessage);
 
     return () => {
-      socket.off("newMessage", handleNewMessage);
+      socket?.off("newMessage", handleNewMessage);
     };
   }, [userData?.data.user.id, isConnected, handleNewMessage]);
 
   // Join room
   useEffect(() => {
     if (roomId && userData?.data.user.id && isConnected) {
-      socket.emit("joinRoom", {
+      socket?.emit("joinRoom", {
         userId: userData.data.user.id,
         roomId: Number(roomId),
       });
@@ -195,7 +195,7 @@ export const useChatRoom = ({
       content: message.trim(),
     };
 
-    socket.emit("sendMessage", messageData);
+    socket?.emit("sendMessage", messageData);
     setMessage("");
     setTimeout(() => inputRef.current?.focus(), 0);
   };
@@ -221,14 +221,14 @@ export const useChatRoom = ({
   const handleTyping = () => {
     if (!roomId || !userData?.data.user.id) return;
 
-    socket.emit("typing", {
+    socket?.emit("typing", {
       roomId: Number(roomId),
       userId: Number(userData.data.user.id),
     });
 
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
-      socket.emit("stopTyping", {
+      socket?.emit("stopTyping", {
         roomId: Number(roomId),
         userId: Number(userData.data.user.id),
       });
@@ -238,17 +238,17 @@ export const useChatRoom = ({
   useEffect(() => {
     if (!isConnected) return;
 
-    socket.on("typing", ({ userId }) => {
+    socket?.on("typing", ({ userId }) => {
       if (userId !== userData?.data.user.id) {
         setTypingUsers((prev) => [...new Set([...prev, userId])]);
       }
     });
 
-    socket.on("stopTyping", ({ userId }) => {
+    socket?.on("stopTyping", ({ userId }) => {
       setTypingUsers((prev) => prev.filter((id) => id !== userId));
     });
 
-    socket.on("messageRead", ({ userId, messageId }) => {
+    socket?.on("messageRead", ({ userId, messageId }) => {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
@@ -259,9 +259,9 @@ export const useChatRoom = ({
     });
 
     return () => {
-      socket.off("typing");
-      socket.off("stopTyping");
-      socket.off("messageRead");
+      socket?.off("typing");
+      socket?.off("stopTyping");
+      socket?.off("messageRead");
     };
   }, [isConnected, userData?.data.user.id]);
 
@@ -270,7 +270,7 @@ export const useChatRoom = ({
     if (!messages.length || !userData?.data.user.id) return;
     const lastMsg = messages[messages.length - 1];
     if (lastMsg.user.id !== userData.data.user.id) {
-      socket.emit("markAsRead", {
+      socket?.emit("markAsRead", {
         roomId: Number(roomId),
         userId: userData.data.user.id,
         messageId: lastMsg.id,

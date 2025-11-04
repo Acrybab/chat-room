@@ -29,9 +29,9 @@ export const useHomePage = () => {
 
   const handleJoinRoom = (roomId: number) => {
     // Join room
-    socket.emit("joinRoom", { roomId: roomId });
+    socket?.emit("joinRoom", { roomId: roomId });
 
-    socket.on("userJoined", (data) => {
+    socket?.on("userJoined", (data) => {
       console.log("User joined room:", data);
     });
     navigate(`/room/${roomId}`);
@@ -47,9 +47,7 @@ export const useHomePage = () => {
     queryKey: ["users"],
     queryFn: getAllUsersFunction,
   });
-  const isOwner = data?.data.users.map((user) =>
-    user.chatRoomMembers?.filter((member) => member.isAdmin === true)
-  );
+  const ownerId = loggedInUser?.id;
   const users = data?.data.users || [];
 
   const filteredUsers = users.filter(
@@ -95,7 +93,6 @@ export const useHomePage = () => {
       });
     },
   });
-  console.log(isOwner, "isOwner");
   const handleCreateRoom = (roomName: string) => {
     if (!roomName.trim()) {
       toast.error("Room name cannot be empty.", {
@@ -142,6 +139,6 @@ export const useHomePage = () => {
     error,
     searchQuery,
     filteredUsers,
-    isOwner,
+    ownerId,
   };
 };

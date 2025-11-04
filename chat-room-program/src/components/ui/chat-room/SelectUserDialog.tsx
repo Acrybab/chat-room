@@ -72,7 +72,7 @@ export const SelectUserDialog = ({
 
     const userIds = selectedUsers.map((user) => user.id);
 
-    socket.emit(
+    socket?.emit(
       "addUserToRoom",
       {
         roomId: parseInt(roomId),

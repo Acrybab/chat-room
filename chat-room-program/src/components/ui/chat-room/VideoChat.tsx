@@ -167,7 +167,7 @@ export const VideoChat = ({
 
     // Emit endCall cho backend
     if (isCommingCall?.callId && identity && roomId) {
-      socket.emit("endCall", {
+      socket?.emit("endCall", {
         callId: isCommingCall.callId,
         roomId: Number(roomId),
         userId: identity,
