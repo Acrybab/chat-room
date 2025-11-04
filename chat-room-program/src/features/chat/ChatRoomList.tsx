@@ -1,7 +1,4 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-// import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { socket } from "@/components/ui/chat-room/socket";
 import { useChatRoomList } from "@/hooks/useChatRoomList";
 import type { Room } from "@/types/chatRoom.types";
