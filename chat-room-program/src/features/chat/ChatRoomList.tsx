@@ -126,35 +126,47 @@ export const ChatRoomList = ({ handleJoinRoom }: ChatRoomListProps) => {
             <div className="relative flex items-center gap-4 flex-1 min-w-0">
               {/* Avatar with enhanced effects */}
               <div className="relative flex-shrink-0">
-                {/* Glow ring for active rooms */}
+                {/* Animated rings for active rooms - multiple layers */}
                 {room.isActive && (
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 opacity-20 blur-md animate-pulse" />
+                  <>
+                    <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" />
+                    <div
+                      className="absolute inset-0 rounded-full border-2 border-green-500/20 animate-pulse"
+                      style={{ animationDelay: "0.5s" }}
+                    />
+                  </>
                 )}
 
                 <Avatar
                   className={`w-16 h-16 border-[3px] transition-all duration-300 group-hover:scale-110 relative z-10 ${
                     room.isActive
                       ? "border-green-400 shadow-lg shadow-green-500/30"
-                      : "border-transparent group-hover:border-primary/30"
+                      : "border-border group-hover:border-primary/50 shadow-md"
                   }`}
                 >
                   <AvatarFallback
-                    className={`text-white font-bold text-xl transition-all duration-300 ${
+                    className={`text-white font-bold text-xl transition-all duration-300 relative overflow-hidden ${
                       room.isActive
                         ? "bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600"
-                        : "bg-gradient-to-br from-gray-500 via-gray-600 to-slate-600 group-hover:from-gray-400 group-hover:to-slate-500"
+                        : "bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 group-hover:from-slate-500 group-hover:to-slate-700"
                     }`}
                   >
-                    <Hash className="w-7 h-7" />
+                    {/* Subtle shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <Hash className="w-7 h-7 relative z-10" />
                   </AvatarFallback>
                 </Avatar>
 
-                {/* Animated status dot */}
+                {/* Active status indicator - top right corner with glow */}
                 {room.isActive && (
-                  <div className="absolute bottom-0 right-0 z-20">
+                  <div className="absolute -top-1 -right-1 z-20">
                     <div className="relative">
-                      <div className="w-5 h-5 bg-green-500 border-[3px] border-background rounded-full" />
-                      <div className="absolute inset-0 w-5 h-5 bg-green-400 rounded-full animate-ping opacity-75" />
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 w-4 h-4 bg-green-400 rounded-sm blur-md opacity-60" />
+                      {/* Main indicator */}
+                      <div className="relative w-4 h-4 bg-gradient-to-br from-green-400 to-green-600 rounded-sm rotate-45 shadow-lg">
+                        <div className="absolute inset-0.5 bg-green-500 rounded-sm animate-pulse" />
+                      </div>
                     </div>
                   </div>
                 )}
