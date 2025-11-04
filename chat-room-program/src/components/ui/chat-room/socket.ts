@@ -178,3 +178,12 @@ export const setupSocket = async () => {
 
   return socket;
 };
+(async () => {
+  const token = getToken();
+  if (token) {
+    console.log("🌐 Reinitializing socket after reload...");
+    await setupSocket();
+  } else {
+    console.log("⚠️ No token found, skipping socket setup");
+  }
+})();
