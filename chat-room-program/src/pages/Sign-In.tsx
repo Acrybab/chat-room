@@ -13,7 +13,7 @@ import axios from "axios";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye } from "lucide-react";
-import { socket } from "@/components/ui/chat-room/socket";
+import { setupSocket } from "@/components/ui/chat-room/socket";
 import { useAuth } from "@/hooks/useAuth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -72,43 +72,21 @@ export const SignIn = () => {
 
   const { mutate: signIn } = useMutation({
     mutationFn: signInFunction,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const user = data.data.user;
       const token = data.data.accessToken;
+
       handleLogIn(user);
       setToken(token);
 
-      if (socket?.connected) {
-        socket.disconnect();
+      // 👇 Quan trọng: khởi tạo lại socket sau khi có token
+      const newSocket = await setupSocket();
+      if (newSocket) {
+        console.log("✅ Socket initialized after login:", newSocket.id);
       }
 
-      socket!.io.opts.query = {
-        userId: user.id.toString(),
-      };
-      socket!.auth = { userId: user.id, token };
-
-      socket!.connect();
-
-      socket?.on("connect", () => {
-        console.log("✅ Socket connected:", socket?.id);
-        console.log("✅ UserId sent:", user.id);
-        socket?.emit("onlineUser", { userId: user.id });
-      });
-
-      socket?.on("connect_error", (error) => {
-        console.error("❌ Socket connect error:", error);
-      });
-
-      socket?.on("userStatusChanged", (data) => {
-        console.log("👥 User status changed:", data);
-      });
-
       navigate("/");
-      toast.success("Successfully signed in!", {
-        position: "top-right",
-        duration: 4000,
-        className: "bg-green-500 text-white font-semibold shadow-lg",
-      });
+      toast.success("Successfully signed in!");
     },
     onError: (error) => {
       console.log(error);
