@@ -24,6 +24,7 @@ import EmojiPicker from "emoji-picker-react";
 import { Theme } from "emoji-picker-react";
 import { SkinTones } from "emoji-picker-react";
 import { getToken } from "@/lib/cookies";
+import axios from "axios";
 
 interface MessageInputProps {
   message: string;
@@ -176,6 +177,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         throw new Error(data.error || "Upload failed");
       }
 
+      const responseFromAI = await axios.post(
+        `https://api.dify.ai/v1/audio-to-text`,
+        {
+          headers: {
+            Authorization: `Bearer app-Pr1pAnU3MhSw1EocZZX0JYhw`,
+            "Content-Type": "form-data",
+          },
+          data: {
+            audio_file: file,
+          },
+        }
+      );
+
+      console.log("Transcription result:", responseFromAI.data);
+
       const fileUrl = data.fileUrl;
 
       // Gửi socket như cũ
@@ -186,14 +202,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         fileName: file.name,
         fileType: file.type,
       });
-      console.log("📤 Emitted sendFileMessage:", {
-        roomId: Number(roomId),
-        userId: userData.data.user.id,
-        fileUrl: fileUrl,
-        fileName: file.name,
-        fileType: file.type,
-      });
-      console.log("✅ File uploaded and sent successfully");
     } catch (error) {
       console.error("❌ Error uploading file:", error);
       alert("Không thể upload file. Vui lòng thử lại!");
